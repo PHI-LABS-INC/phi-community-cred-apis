@@ -14,6 +14,12 @@ export const metadata: Metadata = {
     title: "PHI Community Cred APIs",
     description: "APIs for managing and interacting with community creds",
     type: "website",
+    images: [
+      {
+        url: "/public/preview.png",
+        alt: "Phi Protocol API Verification",
+      },
+    ],
   },
 };
 

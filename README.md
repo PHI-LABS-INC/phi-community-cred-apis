@@ -1,4 +1,4 @@
-#  Phi Community Cred APIs 🚀
+# Phi Community Cred APIs 🚀
 
 Welcome to the Phi Community Cred APIs repository! This project provides a comprehensive suite of APIs designed to manage and verify credentials (Creds) within the **phi.box** platform. Our APIs facilitate seamless interaction with user credentials, ensure the health of the system, and offer detailed documentation for developers.
 
@@ -44,11 +44,13 @@ Once running, your API will be accessible at `http://localhost:3000`.
 To contribute by adding new APIs, follow these steps:
 
 1. **Create the Endpoint**:
+
    - Determine the type of API you want to create (e.g., cred APIs on base).
    - Create the appropriate endpoint in the corresponding folder. For example, if you want to create a cred API on base, create the endpoint in the `base` folder.
    - Refer to this repository for understanding the structure and implementation: [Verifier Template](https://github.com/PHI-LABS-INC/verifier-template).
 
 2. **Endpoint Requirements**:
+
    - Your endpoint should return a JSON object with the following three properties:
      - `mint_eligibility`: Indicates if the address is eligible for minting.
      - `data`: Contains the relevant data for the request.
@@ -58,15 +60,14 @@ To contribute by adding new APIs, follow these steps:
    - Once the API is created, add the endpoint details to the `data/api-config.ts` file.
    - Ensure you include the method, path, id, and description for the new endpoint.
 
-   
 ## Example of an endpoint response:
 
 Your endpoint should return a JSON object with the following three properties:
 
- ```json
- {
-   "mint_eligibility": false,
-   "data": "0",
-   "signature": "0xdf...988dfb7"
- }
- ```
+```json
+{
+  "mint_eligibility": false,
+  "data": "0",
+  "signature": "0xdf...988dfb7"
+}
+```
