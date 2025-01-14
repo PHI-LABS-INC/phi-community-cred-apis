@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+#  Phi Community Cred APIs 🚀
+
+Welcome to the Phi Community Cred APIs repository! This project provides a comprehensive suite of APIs designed to manage and verify credentials (Creds) within the **phi.box** platform. Our APIs facilitate seamless interaction with user credentials, ensure the health of the system, and offer detailed documentation for developers.
+
+![Phi Protocol API Verification](./public/preview.png)
+
+## Key Features
+
+- **Cred Verification APIs**: Robust APIs for verifying user credentials within the **phi.box** ecosystem.
+- **API Health Monitoring**: Tools to monitor and ensure the uptime and reliability of the APIs.
+- **Comprehensive Documentation**: Access in-depth documentation for all available API endpoints to streamline integration and usage.
 
 ## Getting Started
 
-First, run the development server:
+To set up the **Phi Protocol API Verification** project locally, follow these steps:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Clone the repository:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+   ```bash
+   git clone https://github.com/PHI-LABS-INC/phi-community-cred-apis.git
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. Navigate into the project directory:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   ```bash
+   cd phi-community-cred-apis
+   ```
 
-## Learn More
+3. Install the necessary dependencies:
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. Launch the application:
+   ```bash
+   npm run dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Once running, your API will be accessible at `http://localhost:3000`.
 
-## Deploy on Vercel
+## Accessing API Documentation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+For full API documentation, visit the following endpoint in your browser:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Contributing to Add APIs
+
+To contribute by adding new APIs, follow these steps:
+
+1. **Create the Endpoint**:
+   - Determine the type of API you want to create (e.g., cred APIs on base).
+   - Create the appropriate endpoint in the corresponding folder. For example, if you want to create a cred API on base, create the endpoint in the `base` folder.
+   - Refer to this repository for understanding the structure and implementation: [Verifier Template](https://github.com/PHI-LABS-INC/verifier-template).
+
+2. **Endpoint Requirements**:
+   - Your endpoint should return a JSON object with the following three properties:
+     - `mint_eligibility`: Indicates if the address is eligible for minting.
+     - `data`: Contains the relevant data for the request.
+     - `signature`: A cryptographic signature for the response.
+
+3. **Add the Endpoint to Configuration**:
+   - Once the API is created, add the endpoint details to the `data/api-config.ts` file.
+   - Ensure you include the method, path, id, and description for the new endpoint.
+
+   
+## Example of an endpoint response:
+
+Your endpoint should return a JSON object with the following three properties:
+
+ ```json
+ {
+   "mint_eligibility": false,
+   "data": "0",
+   "signature": "0xdf...988dfb7"
+ }
+ ```
