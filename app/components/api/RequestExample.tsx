@@ -73,7 +73,7 @@ export default function RequestExample({ path }: RequestExampleProps) {
             </button>
           </div>
           <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 shadow-sm overflow-auto">
-            <pre className="text-sm text-slate-800 whitespace-pre-wrap break-words">
+            <pre className="text-sm text-slate-800 break-words">
               <code>{command}</code>
             </pre>
           </div>

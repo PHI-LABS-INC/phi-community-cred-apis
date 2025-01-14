@@ -22,18 +22,18 @@ export default function EndpointLink({ endpoint }: EndpointLinkProps) {
                    transition-colors group text-left
                    ${
                      activeEndpoint === endpoint.id
-                       ? "bg-slate-50"
-                       : "hover:bg-slate-50"
+                       ? "bg-gray-100"
+                       : "hover:bg-gray-100"
                    }`}
       >
         <span
           className={`font-mono text-xs font-medium px-2 py-1 rounded-md
                     ${
                       endpoint.method === "GET"
-                        ? "bg-emerald-100 text-emerald-700"
+                        ? "bg-green-200 text-green-800"
                         : endpoint.method === "POST"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-slate-100 text-slate-700"
+                        ? "bg-blue-200 text-blue-800"
+                        : "bg-gray-200 text-gray-800"
                     }`}
         >
           {endpoint.method}
@@ -42,8 +42,8 @@ export default function EndpointLink({ endpoint }: EndpointLinkProps) {
           className={`text-sm transition-colors
                        ${
                          activeEndpoint === endpoint.id
-                           ? "text-indigo-600"
-                           : "text-slate-600 group-hover:text-indigo-600"
+                           ? "text-green-700"
+                           : "text-gray-700 group-hover:text-green-700"
                        }`}
         >
           {endpoint.path}

@@ -1,3 +1,4 @@
+import { ApiDataFetcher } from "./ApiDataFetcher";
 import { ApiHealthStatus } from "./ApiHealthStatus";
 import ParametersTable from "./ParametersTable";
 import RequestExample from "./RequestExample";
@@ -45,6 +46,7 @@ export default function EndpointSection({
       <div>
         <ParametersTable parameters={parameters} />
         <ApiHealthStatus path={path} />
+        <ApiDataFetcher path={path} />
         <RequestExample path={path} />
         <ResponseExample />
       </div>
