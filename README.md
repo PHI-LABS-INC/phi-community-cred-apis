@@ -39,10 +39,6 @@ To set up the **Phi Protocol API Verification** project locally, follow these st
 
 Once running, your API will be accessible at `http://localhost:3000`.
 
-## Accessing API Documentation
-
-For full API documentation, visit the following endpoint in your browser:
-
 ## Contributing to Add APIs
 
 To contribute by adding new APIs, follow these steps:
