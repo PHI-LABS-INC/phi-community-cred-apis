@@ -27,6 +27,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address owns an ANS (Arweave Name Service) domain from creator.bid and returns eligibility status with cryptographic signature",
   },
+  {
+    method: "GET",
+    path: "/api/base/morpho-loan",
+    id: "verifymorpholoan",
+    description:
+      "Verifies if an Ethereum address has an active USDC loan on Morpho (Base) and returns eligibility status",
+  },
 ];
 
 export const parameters = [
