@@ -4,10 +4,67 @@ import { isWithinInterval } from "date-fns";
 import { createSignature } from "@/app/lib/signature";
 import PQueue from "p-queue";
 
-const queue = new PQueue({ interval: 1000, intervalCap: 5 }); // 5 requests per second
+// Create separate queues for each API key
+const API_KEYS = (process.env.BASE_SCAN_API_KEYS_BATCH || "")
+  .split(",")
+  .filter(Boolean);
+if (API_KEYS.length === 0) {
+  throw new Error("No API keys configured");
+}
 
-async function fetchWithRateLimit(url: string): Promise<any> {
-  return queue.add(() => fetch(url).then((res) => res.json()));
+// Create a queue for each API key with higher rate limits
+const queues = API_KEYS.map(
+  (_, index) => new PQueue({ interval: 1000, intervalCap: 5 })
+); // Reduced to 5 requests per second per API key to be safer
+
+let currentQueueIndex = 0;
+
+async function fetchWithRateLimit(url: string, retries = 5): Promise<any> {
+  const tryFetch = async (attempt: number) => {
+    const queue = queues[currentQueueIndex];
+    const apiKey = API_KEYS[currentQueueIndex];
+
+    // Round-robin between API keys
+    currentQueueIndex = (currentQueueIndex + 1) % API_KEYS.length;
+
+    try {
+      const fetchWithTimeout = async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+        try {
+          const response = await fetch(
+            url.replace(/apikey=([^&]*)/, `apikey=${apiKey}`),
+            { signal: controller.signal }
+          );
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          clearTimeout(timeout);
+          return data;
+        } catch (error) {
+          clearTimeout(timeout);
+          throw error;
+        }
+      };
+
+      // Execute request with queue to ensure rate limiting
+      return await queue.add(fetchWithTimeout);
+    } catch (error: unknown) {
+      console.warn(`Attempt ${attempt} failed:`, error instanceof Error ? error.message : String(error));
+      
+      if (attempt < retries) {
+        // Exponential backoff with jitter
+        const backoff = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000);
+        await new Promise((resolve) => setTimeout(resolve, backoff));
+        return tryFetch(attempt + 1);
+      }
+      throw error;
+    }
+  };
+
+  return tryFetch(1);
 }
 
 export async function GET(req: NextRequest) {
@@ -21,10 +78,19 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Get transaction verification results
-    const [mint_eligibility, data] = await verifyTransaction(
-      address as Address
-    );
+    // Get transaction verification results with retries
+    let result;
+    for (let i = 0; i < 3; i++) {
+      try {
+        result = await verifyTransaction(address as Address);
+        break;
+      } catch (error) {
+        if (i === 2) throw error; // Throw on final attempt
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Linear backoff
+      }
+    }
+
+    const [mint_eligibility, data] = result!;
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
@@ -40,7 +106,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error in handler:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Please try again later" },
       { status: 500 }
     );
   }
@@ -55,15 +121,19 @@ export async function GET(req: NextRequest) {
  */
 async function verifyTransaction(address: Address): Promise<[boolean, string]> {
   try {
-    // Fetch transaction history from Basescan API using rate limiter
+    // Fetch transaction history from Basescan API using optimized rate limiter
     const data = await fetchWithRateLimit(
-      `https://api.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${process.env.BASE_SCAN_API_KEY}`
+      `https://api.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${API_KEYS[0]}`
     );
 
     // Check for API errors
     if (data.status === "0" && data.message === "NOTOK") {
       if (data.result === "Missing/Invalid API Key") {
         throw new Error("Missing or invalid API key");
+      }
+      if (data.result.includes("Max rate limit reached")) {
+        // Will trigger retry with different API key
+        throw new Error("Rate limit reached");
       }
       throw new Error(data.result || "API request failed");
     }
@@ -83,18 +153,22 @@ async function verifyTransaction(address: Address): Promise<[boolean, string]> {
       end: new Date("2025-01-31T23:59:59Z"),
     };
 
-    // Count transactions within January 2025
-    const januaryTxCount = data.result.filter((tx: { timeStamp: string }) => {
-      const txDate = new Date(parseInt(tx.timeStamp) * 1000); // Convert Unix timestamp to Date
-      return isWithinInterval(txDate, targetInterval);
-    }).length;
+    // Optimize transaction counting with early return
+    let januaryTxCount = 0;
+    for (const tx of data.result) {
+      const txDate = new Date(parseInt(tx.timeStamp) * 1000);
+      if (isWithinInterval(txDate, targetInterval)) {
+        januaryTxCount++;
+        // Early return if we find at least one transaction (since that's all we need)
+        if (januaryTxCount >= 1) {
+          return [true, januaryTxCount.toString()];
+        }
+      }
+    }
 
-    // Determine eligibility (must have at least 1 transaction)
-    const isEligible = januaryTxCount >= 1;
-
-    return [isEligible, januaryTxCount.toString()];
+    return [false, "0"];
   } catch (error) {
     console.error("Error fetching transaction data:", error);
-    throw new Error("Failed to verify address transactions");
+    throw error; // Propagate error for retry logic
   }
 }
