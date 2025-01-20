@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { Address, isAddress } from "viem";
 import { isWithinInterval } from "date-fns";
 import { createSignature } from "@/app/lib/signature";
+import PQueue from "p-queue";
+
+const queue = new PQueue({ interval: 1000, intervalCap: 5 }); // 5 requests per second
+
+async function fetchWithRateLimit(url: string): Promise<any> {
+  return queue.add(() => fetch(url).then((res) => res.json()));
+}
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
@@ -48,12 +55,10 @@ export async function GET(req: NextRequest) {
  */
 async function verifyTransaction(address: Address): Promise<[boolean, string]> {
   try {
-    // Fetch transaction history from Basescan API
-    const response = await fetch(
+    // Fetch transaction history from Basescan API using rate limiter
+    const data = await fetchWithRateLimit(
       `https://api.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${process.env.BASE_SCAN_API_KEY}`
     );
-
-    const data = await response.json();
 
     // Check for API errors
     if (data.status === "0" && data.message === "NOTOK") {
