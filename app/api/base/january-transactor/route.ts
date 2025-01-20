@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Address, isAddress } from "viem";
-import { parseISO, isWithinInterval } from "date-fns";
+import { isWithinInterval } from "date-fns";
 import { createSignature } from "@/app/lib/signature";
 
 export async function GET(req: NextRequest) {
@@ -79,7 +79,7 @@ async function verifyTransaction(address: Address): Promise<[boolean, string]> {
     };
 
     // Count transactions within January 2025
-    const januaryTxCount = data.result.filter((tx: { timeStamp: string; }) => {
+    const januaryTxCount = data.result.filter((tx: { timeStamp: string }) => {
       const txDate = new Date(parseInt(tx.timeStamp) * 1000); // Convert Unix timestamp to Date
       return isWithinInterval(txDate, targetInterval);
     }).length;
