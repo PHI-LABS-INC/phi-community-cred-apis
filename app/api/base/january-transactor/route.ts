@@ -14,12 +14,15 @@ if (API_KEYS.length === 0) {
 
 // Create a queue for each API key with higher rate limits
 const queues = API_KEYS.map(
-  (_, index) => new PQueue({ interval: 1000, intervalCap: 5 })
+  () => new PQueue({ interval: 1000, intervalCap: 5 })
 ); // Reduced to 5 requests per second per API key to be safer
 
 let currentQueueIndex = 0;
 
-async function fetchWithRateLimit(url: string, retries = 5): Promise<any> {
+async function fetchWithRateLimit(
+  url: string,
+  retries = 5
+): Promise<Record<string, unknown>> {
   const tryFetch = async (attempt: number) => {
     const queue = queues[currentQueueIndex];
     const apiKey = API_KEYS[currentQueueIndex];
@@ -52,11 +55,17 @@ async function fetchWithRateLimit(url: string, retries = 5): Promise<any> {
       // Execute request with queue to ensure rate limiting
       return await queue.add(fetchWithTimeout);
     } catch (error: unknown) {
-      console.warn(`Attempt ${attempt} failed:`, error instanceof Error ? error.message : String(error));
-      
+      console.warn(
+        `Attempt ${attempt} failed:`,
+        error instanceof Error ? error.message : String(error)
+      );
+
       if (attempt < retries) {
         // Exponential backoff with jitter
-        const backoff = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000);
+        const backoff = Math.min(
+          1000 * Math.pow(2, attempt) + Math.random() * 1000,
+          10000
+        );
         await new Promise((resolve) => setTimeout(resolve, backoff));
         return tryFetch(attempt + 1);
       }
@@ -86,7 +95,7 @@ export async function GET(req: NextRequest) {
         break;
       } catch (error) {
         if (i === 2) throw error; // Throw on final attempt
-        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Linear backoff
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1))); // Linear backoff
       }
     }
 
@@ -131,11 +140,16 @@ async function verifyTransaction(address: Address): Promise<[boolean, string]> {
       if (data.result === "Missing/Invalid API Key") {
         throw new Error("Missing or invalid API key");
       }
-      if (data.result.includes("Max rate limit reached")) {
+      if (
+        typeof data.result === "string" &&
+        data.result.includes("Max rate limit reached")
+      ) {
         // Will trigger retry with different API key
         throw new Error("Rate limit reached");
       }
-      throw new Error(data.result || "API request failed");
+      throw new Error(
+        typeof data.result === "string" ? data.result : "API request failed"
+      );
     }
 
     // Return default values if no transaction data
