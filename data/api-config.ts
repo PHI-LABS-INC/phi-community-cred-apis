@@ -34,6 +34,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has an active USDC loan on Morpho (Base) and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/january-transactor",
+    id: "verifybasetx",
+    description:
+      "Verifies if an Ethereum address has transactions in January 2025 on Base and returns eligibility status with cryptographic signature",
+  },
 ];
 
 export const parameters = [
