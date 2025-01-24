@@ -1,11 +1,23 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import PQueue from "p-queue";
+import { createPublicClient, http } from "viem";
+import { base } from "viem/chains";
+import { AccrualPosition } from "@morpho-org/blue-sdk-viem/lib/augment/Position";
+import { MarketId } from "@morpho-org/blue-sdk";
+
+const client = createPublicClient({
+  chain: base,
+  transport: http(),
+});
+
+const queue = new PQueue({ interval: 1000, intervalCap: 5 });
 
 export async function GET(req: NextRequest) {
-  try {
-    const address = req.nextUrl.searchParams.get("address");
+  const address = req.nextUrl.searchParams.get("address");
 
+  try {
     if (!address || !isAddress(address)) {
       return new Response(
         JSON.stringify({ error: "Invalid address provided" }),
@@ -16,12 +28,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get verification results
-    const [loan_eligibility, loan_data] = await verifyMorphoLoanBase(
-      address as Address
+    const verificationResult = await queue.add(
+      async () => await verifyMorphoLoanBase(address as Address)
     );
+    const verificationData = verificationResult as [boolean, string];
+    const [loan_eligibility, loan_data] = verificationData;
 
-    // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility: loan_eligibility,
@@ -29,18 +41,32 @@ export async function GET(req: NextRequest) {
     });
 
     return new Response(
-      JSON.stringify({ loan_eligibility, data: loan_data ? loan_data : 0, signature }),
+      JSON.stringify({
+        mint_eligibility: loan_eligibility,
+        data: loan_data,
+        signature,
+      }),
       {
         status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        details: errorMessage,
+      }),
+      {
+        status: 500,
         headers: { "Content-Type": "application/json" },
       }
     );
-  } catch (error) {
-    console.error("Error in handler:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
   }
 }
 
@@ -51,35 +77,29 @@ export async function GET(req: NextRequest) {
  * @returns Tuple containing [boolean eligibility status, string loan details]
  * @throws Error if verification fails
  */
-async function verifyMorphoLoanBase(address: Address): Promise<[boolean, string]> {
+async function verifyMorphoLoanBase(
+  address: Address
+): Promise<[boolean, string]> {
   try {
-    const MORPHO_CONTRACT = "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb"; // Replace with actual Base contract address
+    // WETH/USDC MarketId on Morpho Base
+    const USDC_MARKET_ID =
+      "0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda" as MarketId;
 
-    const response = await fetch(
-      `https://api.basescan.org/api?module=account&action=tokenbalance&contractaddress=${MORPHO_CONTRACT}&address=${address}&apikey=${process.env.BASE_SCAN_API_KEY}`
+    const position = await AccrualPosition.fetch(
+      address,
+      USDC_MARKET_ID,
+      client
     );
 
-    const data = await response.json();
+    const hasActiveLoan = position.borrowAssets > 0;
+    const loanDetails = hasActiveLoan
+      ? `Active loan with borrow assets: ${position.borrowAssets}`
+      : "No active loan found";
 
-    if (
-      !data ||
-      (data.status === "0" &&
-        data.message === "NOTOK" &&
-        data.result === "Missing/Invalid API Key")
-    ) {
-      throw new Error("Missing or invalid API key");
-    }
-
-    // Check if loan exists or if balance is greater than 0
-    if (!data.result || data.result.loanAmount === "0") {
-      return [false, "No active loan"];
-    }
-
-    const loanAmount = data.result.loanAmount;
-
-    return [loanAmount > 0, loanAmount];
-  } catch (error) {
-    console.error("Error verifying Morpho loan:", error);
-    throw new Error("Failed to verify Morpho loan status");
+    return [hasActiveLoan, loanDetails];
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    throw new Error(`Failed to verify Morpho loan status: ${errorMessage}`);
   }
 }
