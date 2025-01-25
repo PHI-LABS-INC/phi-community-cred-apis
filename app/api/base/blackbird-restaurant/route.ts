@@ -34,7 +34,7 @@ async function verifyBlackbirdOwnership(
     // Check if any of the NFTs are from the Blackbird contract
     const blackbirdNFTs =
       data.nfts?.filter(
-        (nft: any) =>
+        (nft: { contract: string }) =>
           nft.contract.toLowerCase() ===
           BLACKBIRD_CONTRACT_ADDRESS.toLowerCase()
       ) || [];
@@ -102,9 +102,7 @@ export async function GET(req: NextRequest) {
     );
   } catch (error) {
     console.error("Error in API handler:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
-
+    
     // Return false eligibility instead of error response
     return new Response(
       JSON.stringify({
