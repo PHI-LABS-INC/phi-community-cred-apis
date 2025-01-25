@@ -41,6 +41,41 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has transactions in January 2025 on Base and returns eligibility status with cryptographic signature",
   },
+  {
+    method: "GET",
+    path: "/api/base/cat-town-game",
+    id: "verifycat",
+    description:
+      "Verifies if an Ethereum address holds at least 1000 Kibble tokens and owns at least one Cat Town NFT (Founder Profile Picture Collection) and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/rodeo-content-verifier",
+    id: "verifyrodeo",
+    description:
+      "Verifies if an Ethereum address has content in the Rodeo and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/base/btc-loan-taker",
+    id: "verifybtcloan",
+    description:
+      "Verifies if an Ethereum address has an active BTC loan on Coinbase and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/base/opensea-nft-holder",
+    id: "verifyopensea",
+    description:
+      "Verifies if an Ethereum address has NFTs on OpenSea and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/base/blackbird-restaurant",
+    id: "verifyblackbird",
+    description:
+      "Verifies if an Ethereum address has an NFT from the Blackbird Restaurant collection on Base and returns eligibility status",
+  },
 ];
 
 export const parameters = [
@@ -51,3 +86,5 @@ export const parameters = [
     description: "Ethereum address to verify",
   },
 ];
+
+
