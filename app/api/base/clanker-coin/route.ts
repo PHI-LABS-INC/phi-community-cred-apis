@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Address, isAddress } from "viem";
+import { Address, isAddress, formatUnits } from "viem";
 import { createSignature } from "@/app/lib/signature";
 
 export async function GET(req: NextRequest) {
@@ -74,10 +74,11 @@ async function verifyClankerCoin(address: Address): Promise<[boolean, string]> {
       return [false, "0"];
     }
 
-    const balance = parseInt(data.result);
-    const isEligible = balance > 0;
+    // Use viem's formatUnits to safely handle the balance
+    const balance = formatUnits(BigInt(data.result), 18);
+    const isEligible = parseFloat(balance) > 0;
 
-    return [isEligible, balance.toString()];
+    return [isEligible, balance];
   } catch (error) {
     console.error("Error verifying Clanker coin:", error);
     throw new Error("Failed to verify Clanker coin ownership");
