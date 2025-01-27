@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
-import { Address, isAddress } from "viem";
+import { Address, isAddress, formatUnits } from "viem";
 import { createSignature } from "@/app/lib/signature";
-import PQueue from "p-queue";
 import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
 import { AccrualPosition } from "@morpho-org/blue-sdk-viem/lib/augment/Position";
@@ -11,8 +10,6 @@ const client = createPublicClient({
   chain: base,
   transport: http(),
 });
-
-const queue = new PQueue({ interval: 1000, intervalCap: 5 });
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
@@ -28,11 +25,9 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const verificationResult = await queue.add(
-      async () => await verifyMorphoLoanBase(address as Address)
+    const [loan_eligibility, loan_data] = await verifyMorphoLoanBase(
+      address as Address
     );
-    const verificationData = verificationResult as [boolean, string];
-    const [loan_eligibility, loan_data] = verificationData;
 
     const signature = await createSignature({
       address: address as Address,
@@ -74,7 +69,7 @@ export async function GET(req: NextRequest) {
  * Verifies if an address has an active USDC loan on Morpho (Base)
  *
  * @param address - Ethereum address to check
- * @returns Tuple containing [boolean eligibility status, string loan details]
+ * @returns Tuple containing [boolean eligibility status, string loan amount]
  * @throws Error if verification fails
  */
 async function verifyMorphoLoanBase(
@@ -92,11 +87,10 @@ async function verifyMorphoLoanBase(
     );
 
     const hasActiveLoan = position.borrowAssets > 0;
-    const loanDetails = hasActiveLoan
-      ? `Active loan with borrow assets: ${position.borrowAssets}`
-      : "No active loan found";
+    // Format the borrow amount with 6 decimals (USDC standard)
+    const loanAmount = formatUnits(position.borrowAssets, 6);
 
-    return [hasActiveLoan, loanDetails];
+    return [hasActiveLoan, loanAmount];
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
