@@ -19,16 +19,10 @@ export async function createSignature({
   mint_eligibility: boolean;
   data?: string;
 }): Promise<Hex> {
-  // Ensure `data` fits within 32 bytes by hashing it if it's a string
-  const formattedData =
-    data && typeof data === "string"
-      ? keccak256(toBytes(data)) // Hash the string to a 32-byte value
-      : toHex(data || 0, { size: 32 }); // Use `toHex` for numbers or undefined values
-
   // Encode the parameters
   const encodedData = encodeAbiParameters(
     parseAbiParameters("address, bool, bytes32"),
-    [address, mint_eligibility, formattedData]
+    [address, mint_eligibility, toHex(data || 0, { size: 32 })]
   );
 
   // Sign the hash
