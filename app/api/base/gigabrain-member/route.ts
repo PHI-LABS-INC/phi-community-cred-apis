@@ -25,7 +25,6 @@ export async function GET(req: NextRequest) {
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
-      // Convert data to hex with exactly 32 bytes
       data: data.length > 32 ? data.slice(0, 32) : data.padEnd(32, "0"),
     });
 

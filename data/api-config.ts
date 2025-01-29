@@ -83,6 +83,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address holds either a GigaBrain Pass NFT or at least 1M GigaBrain tokens and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/ethos-network-user",
+    id: "verifyethos",
+    description:
+      "Verifies if an Ethereum address has an Ethos Network profile and returns eligibility status",
+  },
 ];
 
 export const parameters = [
