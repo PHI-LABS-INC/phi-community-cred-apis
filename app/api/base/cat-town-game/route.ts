@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
-      data,
+      data: data.length > 32 ? data.slice(0, 32) : data.padEnd(32, "0"),
     });
 
     // Return successful response with verification results
@@ -141,13 +141,11 @@ async function verifyCatTownGame(address: Address): Promise<[boolean, string]> {
     const data = JSON.stringify({
       hasEnoughKibble,
       ownsNFT,
-      kibbleBalance: balance.toString(),
-      nftBalance: nftBalance.toString()
     });
 
     return [isEligible, data];
   } catch (error) {
     console.error("Error verifying Cat Town Game eligibility:", error);
-    return [false, "Failed to verify Cat Town Game eligibility"];
+    throw error; // Propagate error to be handled by caller
   }
 }
