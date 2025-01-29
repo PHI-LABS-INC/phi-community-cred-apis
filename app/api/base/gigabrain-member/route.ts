@@ -1,6 +1,34 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress, formatUnits } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { createPublicClient, http } from "viem";
+import { base } from "viem/chains";
+
+const client = createPublicClient({
+  chain: base,
+  transport: http(),
+});
+
+// Contract ABIs
+const ERC20_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+];
+
+const ERC721_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "owner", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+];
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,19 +53,36 @@ export async function GET(req: NextRequest) {
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
-      data: data.length > 32 ? data.slice(0, 32) : data.padEnd(32, "0"),
+      data,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ mint_eligibility, data: data.toString(), signature }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in handler:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        details: errorMessage,
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   }
 }
 
@@ -56,40 +101,29 @@ async function verifyGigaBrainHoldings(
     const GIGABRAIN_PASS = "0x4b85316c90f9fdfff093bb9029a727fc12e7e5d8";
     const MIN_TOKEN_AMOUNT = 1_000_000; // 1M tokens
 
-    // Check token balance
-    const tokenResponse = await fetch(
-      `https://api.basescan.org/api?module=account&action=tokenbalance&contractaddress=${GIGABRAIN_TOKEN}&address=${address}&apikey=${process.env.BASE_SCAN_API_KEY}`
-    );
-    const tokenData = await tokenResponse.json();
+    // Check token balance using viem
+    const tokenBalance = (await client.readContract({
+      address: GIGABRAIN_TOKEN,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    })) as bigint;
 
-    // Check NFT balance
-    const nftResponse = await fetch(
-      `https://api.basescan.org/api?module=account&action=tokenbalance&contractaddress=${GIGABRAIN_PASS}&address=${address}&apikey=${process.env.BASE_SCAN_API_KEY}`
-    );
-    const nftData = await nftResponse.json();
-
-    if (
-      !tokenData ||
-      !nftData ||
-      (tokenData.status === "0" && tokenData.message === "NOTOK") ||
-      (nftData.status === "0" && nftData.message === "NOTOK")
-    ) {
-      throw new Error("API request failed");
-    }
+    // Check NFT balance using viem
+    const nftBalance = (await client.readContract({
+      address: GIGABRAIN_PASS,
+      abi: ERC721_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    })) as bigint;
 
     // Format token balance
-    const tokenBalance = formatUnits(BigInt(tokenData.result || "0"), 18);
-    const hasEnoughTokens = parseFloat(tokenBalance) >= MIN_TOKEN_AMOUNT;
-
-    // Check NFT balance
-    const nftBalance = parseInt(nftData.result || "0");
+    const formattedBalance = formatUnits(tokenBalance, 18);
+    const hasEnoughTokens = parseFloat(formattedBalance) >= MIN_TOKEN_AMOUNT;
     const hasPass = nftBalance > 0;
 
     const isEligible = hasEnoughTokens || hasPass;
-    const data = JSON.stringify({
-      tokenBalance,
-      hasPass,
-    });
+    const data = `${formattedBalance},${hasPass}`;
 
     return [isEligible, data];
   } catch (error) {
