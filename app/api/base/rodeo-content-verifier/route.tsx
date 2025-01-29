@@ -6,14 +6,34 @@ import { Address, isAddress } from "viem";
 const RODEO_GRAPHQL_API = "https://api-v2.foundation.app/electric/v2/graphql";
 
 /**
- * Verifies if an address owns content on Rodeo.club using GraphQL
+ * Verifies if an address owns or created content on Rodeo.club using GraphQL
  * @param address - Ethereum address to check
- * @returns {Promise<[boolean, number]>} - Returns if owns content and count
+ * @returns {Promise<[boolean, number]>} - Returns if owns or created content and count
  */
-async function ownsRodeoContent(address: Address): Promise<[boolean, number]> {
-  const query = `
+async function ownsOrCreatedRodeoContent(
+  address: Address
+): Promise<[boolean, number]> {
+  const collectedQuery = `
     query CollectedTokens($address: Address!, $page: Int, $perPage: Limit) {
       collectedTokens(accountAddress: $address, page: $page, perPage: $perPage) {
+        items {
+          tokenId
+          contractAddress
+          creator {
+            wallet {
+              address
+            }
+          }
+          name
+        }
+        totalItems
+      }
+    }
+  `;
+
+  const createdQuery = `
+    query CreatedTokens($address: Address!, $page: Int, $perPage: Limit) {
+      createdTokens(accountAddress: $address, page: $page, perPage: $perPage) {
         items {
           tokenId
           contractAddress
@@ -36,49 +56,63 @@ async function ownsRodeoContent(address: Address): Promise<[boolean, number]> {
   };
 
   try {
-    const response = await fetch(RODEO_GRAPHQL_API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query,
-        variables,
-        operationName: "CollectedTokens",
+    const [collectedResponse, createdResponse] = await Promise.all([
+      fetch(RODEO_GRAPHQL_API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: collectedQuery,
+          variables,
+          operationName: "CollectedTokens",
+        }),
       }),
-    });
+      fetch(RODEO_GRAPHQL_API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: createdQuery,
+          variables,
+          operationName: "CreatedTokens",
+        }),
+      }),
+    ]);
 
-    if (!response.ok) {
+    if (!collectedResponse.ok || !createdResponse.ok) {
       throw new Error(
-        `GraphQL request failed with status ${
-          response.status
-        }: ${await response.text()}`
+        `GraphQL request failed with status ${collectedResponse.status} or ${createdResponse.status}`
       );
     }
 
-    const data = await response.json();
+    const [collectedData, createdData] = await Promise.all([
+      collectedResponse.json(),
+      createdResponse.json(),
+    ]);
 
-    if (data.errors) {
+    if (collectedData.errors || createdData.errors) {
       console.error(
         "GraphQL response errors:",
-        JSON.stringify(data.errors, null, 2)
+        JSON.stringify(collectedData.errors || createdData.errors, null, 2)
       );
       throw new Error(
-        `GraphQL errors: ${data.errors[0]?.message || "Unknown GraphQL error"}`
+        `GraphQL errors: ${
+          collectedData.errors[0]?.message ||
+          createdData.errors[0]?.message ||
+          "Unknown GraphQL error"
+        }`
       );
     }
 
-    // Check if the collected tokens items are returned
-    if (!data?.data?.collectedTokens?.items) {
-      console.warn(
-        "Unexpected GraphQL response structure:",
-        JSON.stringify(data, null, 2)
-      );
-      return [false, 0];
-    }
+    const collectedTokenCount = collectedData.data.collectedTokens.totalItems;
+    const createdTokenCount = createdData.data.createdTokens.totalItems;
 
-    const tokenCount = data.data.collectedTokens.totalItems;
-    return [tokenCount > 0, tokenCount];
+    const isEligible = collectedTokenCount > 0 || createdTokenCount > 0;
+    const totalCount = collectedTokenCount + createdTokenCount;
+
+    return [isEligible, totalCount];
   } catch (error) {
     console.error("Error checking Rodeo content:", error);
     if (error instanceof Error) {
@@ -99,10 +133,10 @@ async function verifyRodeoEligibility(
   address: Address
 ): Promise<[boolean, string]> {
   try {
-    const [ownsContent, tokenCount] = await ownsRodeoContent(address);
+    const [ownsContent, tokenCount] = await ownsOrCreatedRodeoContent(address);
 
     const isEligible = ownsContent;
-    const data = `${tokenCount} total items`;
+    const data = `${tokenCount}`;
 
     return [isEligible, data];
   } catch (error) {
