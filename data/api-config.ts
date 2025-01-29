@@ -76,6 +76,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has an NFT from the Blackbird Restaurant collection on Base and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/gigabrain-member",
+    id: "verifygigabrain",
+    description:
+      "Verifies if an Ethereum address holds either a GigaBrain Pass NFT or at least 1M GigaBrain tokens and returns eligibility status",
+  },
 ];
 
 export const parameters = [
@@ -86,5 +93,3 @@ export const parameters = [
     description: "Ethereum address to verify",
   },
 ];
-
-
