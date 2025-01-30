@@ -90,6 +90,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has an Ethos Network profile and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/super-usdc-holders",
+    id: "verifysuperusdc",
+    description:
+      "Verifies if an Ethereum address holds at least 100,000 USDC on Base and returns eligibility status",
+  },
 ];
 
 export const parameters = [
