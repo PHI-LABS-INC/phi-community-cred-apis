@@ -98,7 +98,7 @@ async function verifyGigaBrainHoldings(
 ): Promise<[boolean, string]> {
   try {
     const GIGABRAIN_TOKEN = "0xCE1eAB31756A48915B7E7bb79C589835aAc6242d";
-    const GIGABRAIN_PASS = "0x4b85316c90f9fdfff093bb9029a727fc12e7e5d8";
+    const GIGABRAIN_PASS = "0xea1a0Fc81b6ca435D39141dA38fe493A21a83298";
     const MIN_TOKEN_AMOUNT = 1_000_000; // 1M tokens
 
     // Check token balance using viem
