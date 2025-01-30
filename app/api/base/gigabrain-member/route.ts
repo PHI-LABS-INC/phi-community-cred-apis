@@ -20,16 +20,6 @@ const ERC20_ABI = [
   },
 ];
 
-const ERC721_ABI = [
-  {
-    inputs: [{ internalType: "address", name: "owner", type: "address" }],
-    name: "balanceOf",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-];
-
 export async function GET(req: NextRequest) {
   try {
     const address = req.nextUrl.searchParams.get("address");
@@ -98,8 +88,8 @@ async function verifyGigaBrainHoldings(
 ): Promise<[boolean, string]> {
   try {
     const GIGABRAIN_TOKEN = "0xCE1eAB31756A48915B7E7bb79C589835aAc6242d";
-    const GIGABRAIN_PASS = "0xea1a0Fc81b6ca435D39141dA38fe493A21a83298";
-    const MIN_TOKEN_AMOUNT = 1_000_000; // 1M tokens
+    // const GIGABRAIN_PASS = "0xea1a0Fc81b6ca435D39141dA38fe493A21a83298";
+    const MIN_TOKEN_AMOUNT = 100; // 1M tokens
 
     // Check token balance using viem
     const tokenBalance = (await client.readContract({
@@ -109,21 +99,11 @@ async function verifyGigaBrainHoldings(
       args: [address],
     })) as bigint;
 
-    // Check NFT balance using viem
-    const nftBalance = (await client.readContract({
-      address: GIGABRAIN_PASS,
-      abi: ERC721_ABI,
-      functionName: "balanceOf",
-      args: [address],
-    })) as bigint;
-
     // Format token balance
     const formattedBalance = formatUnits(tokenBalance, 18);
     const hasEnoughTokens = parseFloat(formattedBalance) >= MIN_TOKEN_AMOUNT;
-    const hasPass = nftBalance > 0;
-
-    const isEligible = hasEnoughTokens || hasPass;
-    const data = `${formattedBalance},${hasPass}`;
+    const isEligible = hasEnoughTokens;
+    const data = `${formattedBalance}`;
 
     return [isEligible, data];
   } catch (error) {
