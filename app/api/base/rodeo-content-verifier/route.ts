@@ -1,19 +1,59 @@
-import { createSignature } from "@/app/lib/signature";
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
+import { createSignature } from "@/app/lib/signature";
 
-// Configuration
-const RODEO_GRAPHQL_API = "https://api-v2.foundation.app/electric/v2/graphql";
+export async function GET(req: NextRequest) {
+  try {
+    const address = req.nextUrl.searchParams.get("address");
+
+    if (!address || !isAddress(address)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid address provided" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Get verification results
+    const [mint_eligibility, data] = await verifyRodeoContent(
+      address as Address
+    );
+
+    // Generate cryptographic signature of the verification results
+    const signature = await createSignature({
+      address: address as Address,
+      mint_eligibility,
+      data,
+    });
+
+    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Error in handler:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
 
 /**
  * Verifies if an address owns or created content on Rodeo.club using GraphQL
  * @param address - Ethereum address to check
- * @returns {Promise<[boolean, number]>} - Tuple containing eligibility status and total content count
+ * @returns Tuple containing [boolean eligibility status, string total count]
+ * @throws Error if verification fails
  */
 async function verifyRodeoContent(
   address: Address
-): Promise<[boolean, number]> {
+): Promise<[boolean, string]> {
   try {
+    const RODEO_GRAPHQL_API =
+      "https://api-v2.foundation.app/electric/v2/graphql";
+
     const collectedQuery = `
       query CollectedTokens($address: Address!, $page: Int, $perPage: Limit) {
         collectedTokens(accountAddress: $address, page: $page, perPage: $perPage) {
@@ -39,9 +79,7 @@ async function verifyRodeoContent(
     const [collectedResponse, createdResponse] = await Promise.all([
       fetch(RODEO_GRAPHQL_API, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: collectedQuery,
           variables,
@@ -50,9 +88,7 @@ async function verifyRodeoContent(
       }),
       fetch(RODEO_GRAPHQL_API, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: createdQuery,
           variables,
@@ -62,11 +98,7 @@ async function verifyRodeoContent(
     ]);
 
     if (!collectedResponse.ok || !createdResponse.ok) {
-      console.error(
-        "Error fetching Rodeo data:",
-        `Collected: ${collectedResponse.statusText}, Created: ${createdResponse.statusText}`
-      );
-      return [false, 0];
+      throw new Error("Failed to fetch Rodeo data");
     }
 
     const [collectedData, createdData] = await Promise.all([
@@ -75,94 +107,16 @@ async function verifyRodeoContent(
     ]);
 
     if (collectedData.errors || createdData.errors) {
-      console.error("GraphQL query errors:", {
-        collected: collectedData.errors,
-        created: createdData.errors,
-      });
-      return [false, 0];
+      throw new Error("GraphQL query errors");
     }
 
     const collectedCount = collectedData.data.collectedTokens.totalItems;
     const createdCount = createdData.data.createdTokens.totalItems;
     const totalCount = collectedCount + createdCount;
 
-    return [totalCount > 0, totalCount];
+    return [totalCount > 0, totalCount.toString()];
   } catch (error) {
     console.error("Error verifying Rodeo content:", error);
-    throw new Error("Failed to verify Rodeo content ownership.");
-  }
-}
-
-/**
- * GET API Handler
- */
-export async function GET(req: NextRequest) {
-  try {
-    const address = req.nextUrl.searchParams.get("address");
-
-    if (!address) {
-      return new Response(
-        JSON.stringify({ error: "Address parameter is required" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    if (!isAddress(address)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid Ethereum address format" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // Get verification results
-    const [mint_eligibility, totalCount] = await verifyRodeoContent(
-      address as Address
-    );
-
-    // Generate signature
-    const signature = await createSignature({
-      address: address as Address,
-      mint_eligibility,
-      data: totalCount.toString(),
-    });
-
-    // Return structured response
-    return new Response(
-      JSON.stringify({
-        mint_eligibility,
-        data: totalCount.toString(),
-        signature,
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      }
-    );
-  } catch (error) {
-    console.error("Error in API handler:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
-    return new Response(
-      JSON.stringify({
-        error: "Internal server error",
-        details: errorMessage,
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      }
-    );
+    throw new Error("Failed to verify Rodeo content ownership");
   }
 }
