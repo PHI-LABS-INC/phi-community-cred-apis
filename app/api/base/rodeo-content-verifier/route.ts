@@ -17,18 +17,15 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const [mint_eligibility, data] = await verifyRodeoContent(
-      address as Address
-    );
+    const [mint_eligibility] = await verifyRodeoContent(address as Address);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
-      data,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -49,7 +46,7 @@ export async function GET(req: NextRequest) {
  */
 async function verifyRodeoContent(
   address: Address
-): Promise<[boolean, string]> {
+): Promise<[boolean]> {
   try {
     const RODEO_GRAPHQL_API =
       "https://api-v2.foundation.app/electric/v2/graphql";
@@ -114,7 +111,7 @@ async function verifyRodeoContent(
     const createdCount = createdData.data.createdTokens.totalItems;
     const totalCount = collectedCount + createdCount;
 
-    return [totalCount > 0, totalCount.toString()];
+    return [totalCount > 0];
   } catch (error) {
     console.error("Error verifying Rodeo content:", error);
     throw new Error("Failed to verify Rodeo content ownership");
