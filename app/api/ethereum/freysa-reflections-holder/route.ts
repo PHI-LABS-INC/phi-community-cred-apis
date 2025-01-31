@@ -1,6 +1,24 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { createPublicClient, http } from "viem";
+import { mainnet } from "viem/chains";
+
+const client = createPublicClient({
+  chain: mainnet,
+  transport: http(),
+});
+
+// Contract ABI for ERC721 balanceOf
+const ERC721_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "owner", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+];
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,16 +35,15 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const [mint_eligibility, data] = await verifyFreysaNFT(address as Address);
+    const [mint_eligibility] = await verifyFreysaNFT(address as Address);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
-      data,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -46,25 +63,22 @@ export async function GET(req: NextRequest) {
  * @returns Tuple containing [boolean eligibility status, string NFT count]
  * @throws Error if verification fails
  */
-async function verifyFreysaNFT(address: Address): Promise<[boolean, string]> {
+async function verifyFreysaNFT(address: Address): Promise<[boolean]> {
   try {
-    // Query Ethereum blockchain API for Freysa NFT ownership
     const FREYSA_CONTRACT = "0x3BFb2F2B61Be8f2f147F5F53a906aF00C263D9b3";
 
-    const response = await fetch(
-      `https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=${FREYSA_CONTRACT}&address=${address}&apikey=${process.env.ETHERSCAN_API_KEY}`
-    );
+    // Query NFT balance directly from contract
+    const balance = (await client.readContract({
+      address: FREYSA_CONTRACT,
+      abi: ERC721_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    })) as bigint;
 
-    const data = await response.json();
-
-    if (!data || !data.result) {
-      return [false, "0"];
-    }
-
-    const nftCount = parseInt(data.result);
+    const nftCount = Number(balance);
     const isEligible = nftCount > 0;
 
-    return [isEligible, nftCount.toString()];
+    return [isEligible];
   } catch (error) {
     console.error("Error verifying Freysa NFT:", error);
     throw new Error("Failed to verify Freysa NFT ownership");
