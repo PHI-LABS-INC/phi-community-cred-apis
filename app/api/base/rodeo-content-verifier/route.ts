@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Address, isAddress } from "viem";
+import { Address, Hex, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 
 export async function GET(req: NextRequest) {
@@ -17,22 +17,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const [mint_eligibility, verificationData] = await verifyRodeoContent(
-      address as Address
-    );
+    const [mint_eligibility] = await verifyRodeoContent(address as Address);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data: verificationData,
+      mint_eligibility: mint_eligibility as boolean,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility,
-        data: verificationData,
-        signature,
+        mint_eligibility: mint_eligibility as boolean,
+        signature: signature as Hex,
       }),
       {
         status: 200,
@@ -63,9 +59,7 @@ export async function GET(req: NextRequest) {
  * @returns Tuple containing [boolean eligibility status, string total count]
  * @throws Error if verification fails
  */
-async function verifyRodeoContent(
-  address: Address
-): Promise<[boolean, string]> {
+async function verifyRodeoContent(address: Address): Promise<[boolean]> {
   try {
     const RODEO_GRAPHQL_API =
       "https://api-v2.foundation.app/electric/v2/graphql";
@@ -113,7 +107,7 @@ async function verifyRodeoContent(
     const createdCount = createdData.data.createdTokens.totalItems;
     const isEligible = createdCount > 0;
 
-    return [isEligible, createdCount.toString()];
+    return [isEligible];
   } catch (error) {
     console.error("Error verifying Rodeo content:", error);
     throw new Error(
