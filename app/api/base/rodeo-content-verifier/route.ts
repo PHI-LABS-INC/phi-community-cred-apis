@@ -109,16 +109,19 @@ export async function GET(req: NextRequest) {
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
-      data,
+      data: data.toString(),
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-      },
-    });
+    return new Response(
+      JSON.stringify({ mint_eligibility, data: data.toString(), signature }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in handler:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
