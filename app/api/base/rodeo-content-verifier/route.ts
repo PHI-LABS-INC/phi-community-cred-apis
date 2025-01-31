@@ -54,64 +54,19 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Verifies if an address created content on Rodeo.club using GraphQL
+ * Verifies if an address has a profile on Rodeo.club
  * @param address - Ethereum address to check
- * @returns Tuple containing [boolean eligibility status, string total count]
+ * @returns Tuple containing [boolean eligibility status]
  * @throws Error if verification fails
  */
 async function verifyRodeoContent(address: Address): Promise<[boolean]> {
   try {
-    const RODEO_GRAPHQL_API =
-      "https://api-v2.foundation.app/electric/v2/graphql";
-
-    const createdQuery = `
-      query CreatedTokens($address: Address!, $page: Int, $perPage: Limit) {
-        createdTokens(accountAddress: $address, page: $page, perPage: $perPage) {
-          totalItems
-        }
-      }
-    `;
-
-    const variables = {
-      address: address,
-      page: 0,
-      perPage: 100,
-    };
-
-    const createdResponse = await fetch(RODEO_GRAPHQL_API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: createdQuery,
-        variables,
-        operationName: "CreatedTokens",
-      }),
-    });
-
-    if (!createdResponse.ok) {
-      throw new Error(
-        `Failed to fetch Rodeo data: ${createdResponse.statusText}`
-      );
-    }
-
-    const createdData = await createdResponse.json();
-
-    if (createdData.errors) {
-      throw new Error(
-        `GraphQL query errors: ${JSON.stringify(createdData.errors)}`
-      );
-    }
-
-    const createdCount = createdData.data.createdTokens.totalItems;
-    const isEligible = createdCount > 0;
-
-    return [isEligible];
+    const response = await fetch(`https://rodeo.club/${address}`);
+    return [response.status !== 404];
   } catch (error) {
-    console.error("Error verifying Rodeo content:", error);
+    console.error("Error verifying Rodeo profile:", error);
     throw new Error(
-      `Failed to verify Rodeo content ownership: ${
+      `Failed to verify Rodeo profile: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
     );
