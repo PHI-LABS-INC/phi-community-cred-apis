@@ -79,7 +79,7 @@ async function verifyRodeoContent(
     const totalCount = collectedCount + createdCount;
 
     const isEligible = totalCount > 0;
-    return [isEligible, totalCount.toString()];
+    return [isEligible, totalCount];
   } catch (error) {
     console.error("Error verifying Rodeo content:", error);
     throw new Error("Failed to verify Rodeo content ownership");
