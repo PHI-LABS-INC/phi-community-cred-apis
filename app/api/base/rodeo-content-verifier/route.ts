@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const [mint_eligibility, data] = await verifyRodeoContent(
+    const [mint_eligibility, verificationData] = await verifyRodeoContent(
       address as Address
     );
 
@@ -25,19 +25,35 @@ export async function GET(req: NextRequest) {
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
-      data,
+      data: verificationData,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        mint_eligibility,
+        data: verificationData,
+        signature,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in handler:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }
 
@@ -70,7 +86,9 @@ async function verifyRodeoContent(
 
     const createdResponse = await fetch(RODEO_GRAPHQL_API, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         query: createdQuery,
         variables,
@@ -79,20 +97,29 @@ async function verifyRodeoContent(
     });
 
     if (!createdResponse.ok) {
-      throw new Error("Failed to fetch Rodeo data");
+      throw new Error(
+        `Failed to fetch Rodeo data: ${createdResponse.statusText}`
+      );
     }
 
     const createdData = await createdResponse.json();
 
     if (createdData.errors) {
-      throw new Error("GraphQL query errors");
+      throw new Error(
+        `GraphQL query errors: ${JSON.stringify(createdData.errors)}`
+      );
     }
 
     const createdCount = createdData.data.createdTokens.totalItems;
+    const isEligible = createdCount > 0;
 
-    return [createdCount > 0, createdCount.toString()];
+    return [isEligible, createdCount.toString()];
   } catch (error) {
     console.error("Error verifying Rodeo content:", error);
-    throw new Error("Failed to verify Rodeo content ownership");
+    throw new Error(
+      `Failed to verify Rodeo content ownership: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 }
