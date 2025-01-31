@@ -17,15 +17,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const [mint_eligibility] = await verifyRodeoContent(address as Address);
+    const [mint_eligibility, data] = await verifyRodeoContent(
+      address as Address
+    );
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
+      data,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, signature }), {
+    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -39,25 +42,17 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Verifies if an address owns or created content on Rodeo.club using GraphQL
+ * Verifies if an address created content on Rodeo.club using GraphQL
  * @param address - Ethereum address to check
  * @returns Tuple containing [boolean eligibility status, string total count]
  * @throws Error if verification fails
  */
 async function verifyRodeoContent(
   address: Address
-): Promise<[boolean]> {
+): Promise<[boolean, string]> {
   try {
     const RODEO_GRAPHQL_API =
       "https://api-v2.foundation.app/electric/v2/graphql";
-
-    const collectedQuery = `
-      query CollectedTokens($address: Address!, $page: Int, $perPage: Limit) {
-        collectedTokens(accountAddress: $address, page: $page, perPage: $perPage) {
-          totalItems
-        }
-      }
-    `;
 
     const createdQuery = `
       query CreatedTokens($address: Address!, $page: Int, $perPage: Limit) {
@@ -73,45 +68,29 @@ async function verifyRodeoContent(
       perPage: 100,
     };
 
-    const [collectedResponse, createdResponse] = await Promise.all([
-      fetch(RODEO_GRAPHQL_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: collectedQuery,
-          variables,
-          operationName: "CollectedTokens",
-        }),
+    const createdResponse = await fetch(RODEO_GRAPHQL_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: createdQuery,
+        variables,
+        operationName: "CreatedTokens",
       }),
-      fetch(RODEO_GRAPHQL_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: createdQuery,
-          variables,
-          operationName: "CreatedTokens",
-        }),
-      }),
-    ]);
+    });
 
-    if (!collectedResponse.ok || !createdResponse.ok) {
+    if (!createdResponse.ok) {
       throw new Error("Failed to fetch Rodeo data");
     }
 
-    const [collectedData, createdData] = await Promise.all([
-      collectedResponse.json(),
-      createdResponse.json(),
-    ]);
+    const createdData = await createdResponse.json();
 
-    if (collectedData.errors || createdData.errors) {
+    if (createdData.errors) {
       throw new Error("GraphQL query errors");
     }
 
-    const collectedCount = collectedData.data.collectedTokens.totalItems;
     const createdCount = createdData.data.createdTokens.totalItems;
-    const totalCount = collectedCount + createdCount;
 
-    return [totalCount > 0];
+    return [createdCount > 0, createdCount.toString()];
   } catch (error) {
     console.error("Error verifying Rodeo content:", error);
     throw new Error("Failed to verify Rodeo content ownership");
