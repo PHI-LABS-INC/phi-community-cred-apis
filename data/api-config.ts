@@ -97,6 +97,20 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address holds at least 100,000 USDC on Base and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/timeswap-time-traveller",
+    id: "verifytimeswap",
+    description:
+      "Verifies if an Ethereum address holds any Timeswap Pool Position NFTs and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/base/bento-holder",
+    id: "verifybento",
+    description:
+      "Verifies if an Ethereum address holds any Bento tokens and returns eligibility status",
+  },
 ];
 
 export const parameters = [
