@@ -7,10 +7,21 @@ if (!API_KEY) {
   throw new Error("No API key configured");
 }
 
+interface BaseScanResponse {
+  status: string;
+  message: string;
+  result:
+    | Array<{
+        to: string;
+        isError: string;
+      }>
+    | string;
+}
+
 async function fetchWithRetry(
   url: string,
   retries = 3
-): Promise<Record<string, any>> {
+): Promise<BaseScanResponse> {
   const tryFetch = async (attempt: number) => {
     try {
       const controller = new AbortController();
