@@ -111,6 +111,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address holds any Bento tokens and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/flaunch",
+    id: "verifyflaunch",
+    description:
+      "Verifies if an Ethereum address has interacted with the Flaunch contract and returns eligibility status",
+  },
 ];
 
 export const parameters = [
