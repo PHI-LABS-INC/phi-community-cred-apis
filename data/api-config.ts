@@ -118,6 +118,20 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has interacted with the Flaunch contract and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/infected-fun",
+    id: "verifyinfectedfun",
+    description:
+      "Verifies if an Ethereum address is registered on Infected.fun and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/base/spark-fi",
+    id: "verifysparkfi",
+    description:
+      "Verifies if an Ethereum address has borrowed at least $10 worth of USDS on Spark.fi and returns eligibility status",
+  },
 ];
 
 export const parameters = [
