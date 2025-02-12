@@ -2,6 +2,11 @@ import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { NextRequest } from "next/server";
 
+interface Transaction {
+  to: string;
+  timeStamp: string;
+}
+
 async function verifyDoodlePurchase(address: Address): Promise<boolean> {
   try {
     // Doodles NFT contract address (target for purchase transactions)
@@ -22,7 +27,7 @@ async function verifyDoodlePurchase(address: Address): Promise<boolean> {
     }
 
     // Check if any transaction was sent to the Doodles contract
-    const hasPurchased = data.result.some((tx: any) => {
+    const hasPurchased = data.result.some((tx: Transaction) => {
       // if (!tx.to) return false;
       // // Ensure case insensitive comparison
       // const toAddress = tx.to.toLowerCase();

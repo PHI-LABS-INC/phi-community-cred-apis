@@ -2,6 +2,12 @@ import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { NextRequest } from "next/server";
 
+interface Activity {
+  user?: {
+    address: string;
+  };
+}
+
 async function verifyGamePlayed(address: Address): Promise<boolean> {
   try {
     const apiUrl = `https://api.basement.fun/activities?pageSize=10&pageNumber=1&walletAddress=${address}&type=off-chain`;
@@ -18,7 +24,7 @@ async function verifyGamePlayed(address: Address): Promise<boolean> {
     }
 
     // Check if the address has played at least one game
-    const hasPlayedGame = data.result.data.some((activity: any) => {
+    const hasPlayedGame = data.result.data.some((activity: Activity) => {
       return (
         activity.user &&
         activity.user.address.toLowerCase() === address.toLowerCase()

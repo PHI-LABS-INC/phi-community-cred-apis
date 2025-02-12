@@ -80,15 +80,17 @@ async function verifyNounceDaoVote(address: Address): Promise<boolean> {
     ];
 
     // Check if any transaction to the target contract's castVote function occurred
-    const hasCastVote = data.result.some((tx: any) => {
-      return (
-        tx.to &&
-        tx.to.toLowerCase() === targetContractAddress &&
-        castVoteFunctionSignatures.some((signature) =>
-          tx.input.startsWith(signature)
-        )
-      );
-    });
+    const hasCastVote = data.result.some(
+      (tx: { to: string; input: string }) => {
+        return (
+          tx.to &&
+          tx.to.toLowerCase() === targetContractAddress &&
+          castVoteFunctionSignatures.some((signature) =>
+            tx.input.startsWith(signature)
+          )
+        );
+      }
+    );
 
     return hasCastVote;
   } catch (error) {
