@@ -132,6 +132,48 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has borrowed at least $10 worth of USDS on Spark.fi and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/base-transactions-100",
+    id: "verifybasetx100",
+    description:
+      "Verifies if an Ethereum address has at least 100 transactions on Base and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/nounce-dao-voters",
+    id: "verifynouncedao",
+    description:
+      "Verifies if an Ethereum address has voted in the Nounce DAO and returns eligibility status on ethereum mainnet",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/doodle-holder",
+    id: "verifydoodle",
+    description:
+      "Verifies if an Ethereum address has purchased a Doodle in 2021 and returns eligibility status on ethereum mainnet",
+  },
+  {
+    method: "GET",
+    path: "/api/base/b3-staker",
+    id: "verifyb3staker",
+    description:
+      "Verifies if an Ethereum address holds at least 1000 B3 tokens and returns eligibility status on base",
+  },
+  {
+    method: "GET",
+    path: "/api/base/basement-player",
+    id: "verifybasementplayer",
+    description:
+      "Verifies if an Ethereum address has played at least one game on Basement.fun and returns eligibility status on base",
+  },
+  {
+    method: "GET",
+    path: "/api/base/base-gas-user",
+    id: "verifybasegasuser",
+    description:
+      "Verifies if an Ethereum address has spent at least 0.1 ETH on Base and returns eligibility status",
+  },
 ];
 
 export const parameters = [
