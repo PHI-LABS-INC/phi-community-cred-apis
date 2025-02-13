@@ -17,12 +17,21 @@ async function verifyDoodlePurchase(address: Address): Promise<boolean> {
     }
 
     // Fetch transaction history from Etherscan API
-    const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=latest&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
+    const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
     const response = await fetch(apiUrl);
     const data = await response.json();
 
-    if (data.status !== "1" || !Array.isArray(data.result)) {
-      console.error("Error fetching Etherscan transactions:", data);
+    if (!Array.isArray(data.result)) {
+      console.error("Etherscan API error: result is not an array", data);
+      throw new Error("Failed to fetch transactions from Etherscan");
+    }
+
+    // If no transactions are found (Etherscan returns status "0" with an empty result), treat it as a valid case.
+    if (
+      data.status !== "1" &&
+      !(data.status === "0" && data.result.length === 0)
+    ) {
+      console.error("Etherscan API error:", data);
       throw new Error("Failed to fetch transactions from Etherscan");
     }
 
