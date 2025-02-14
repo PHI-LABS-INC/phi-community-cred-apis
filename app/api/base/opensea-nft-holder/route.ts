@@ -8,6 +8,9 @@ const OPENSEA_API_URL = "https://api.opensea.io/api/v2/chain/base/account";
 // Maximum number of retries for fetching NFT data
 const MAX_RETRIES = 3;
 
+// Helper function to add a delay between retries
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * Gets the number of NFTs owned by an address on OpenSea for the Base network.
  * @param address - Ethereum address to check
@@ -22,11 +25,12 @@ async function getNFTCountOnOpenSeaBase(address: Address): Promise<[boolean]> {
           accept: "application/json",
           "x-api-key": process.env.OPENSEA_API_KEY || "",
         },
+        cache: "no-store", // Ensure we always fetch fresh data
       });
 
       if (!response.ok) {
         console.error("Error fetching OpenSea data:", response.statusText);
-        continue; // Retry on failure
+        continue; 
       }
 
       const data = await response.json();
@@ -37,10 +41,11 @@ async function getNFTCountOnOpenSeaBase(address: Address): Promise<[boolean]> {
       if (attempts === MAX_RETRIES - 1) {
         throw new Error("Failed to verify NFT ownership on OpenSea.");
       }
+      await delay(500);
     }
   }
 
-  return [false]; // Fallback return in case of failure after retries
+  return [false];
 }
 
 /**
