@@ -181,6 +181,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has transacted on Base on Valentine's Day and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/base-gas",
+    id: "verifybasegas",
+    description:
+      "Verifies if an Ethereum address has spent at least 0.1 ETH on Base and returns eligibility status",
+  },
 ];
 
 export const parameters = [
