@@ -195,6 +195,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address holds GHST tokens and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/kaito-ai",
+    id: "verifykaitoai",
+    description:
+      "Verifies if an Ethereum address holds Kaito tokens and returns eligibility status",
+  },
 ];
 
 export const parameters = [
