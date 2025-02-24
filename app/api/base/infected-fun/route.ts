@@ -1,48 +1,28 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import axios from "axios";
 
 async function verifyInfectedFunRegistration(
   address: Address
 ): Promise<boolean> {
   try {
-    const response = await fetch(
-      `https://www.infected.fun/api/users/username?wallet_address=${address}`,
+    const response = await axios.get(
+      `https://www.infected.fun/user/profile?walletAddress=${address}`,
       {
-        // Add timeout to prevent hanging
-        signal: AbortSignal.timeout(5000),
+        timeout: 5000,
       }
     );
 
-    if (!response.ok) {
-      // Log more details about the error
-      console.error(`HTTP error details:`, {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url,
-      });
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("Infected.fun API response:", data);
-    // Return false if name is not present or empty
-    if (!data.name) {
-      return false;
-    }
-    return true;
+    // Return true if response is successful, else return false
+    return response.status === 200;
   } catch (error) {
-    // Add more detailed error logging
     console.error("Error verifying Infected.fun registration:", {
       error,
       address,
       timestamp: new Date().toISOString(),
     });
-    throw new Error(
-      `Failed to verify Infected.fun registration: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
+    return false; // Return false in case of an error
   }
 }
 

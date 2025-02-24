@@ -202,6 +202,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address holds Kaito tokens and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/base-og",
+    id: "verifybaseog",
+    description:
+      "Verifies if an Ethereum address has made a transaction on Base when it launched and returns eligibility status",
+  },
 ];
 
 export const parameters = [
