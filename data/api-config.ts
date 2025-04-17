@@ -209,6 +209,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has made a transaction on Base when it launched and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/ethereum/first-transaction",
+    id: "verifyfirsttransaction",
+    description:
+      "Verifies the first transaction date of an Ethereum address and returns eligibility status",
+  }
 ];
 
 export const parameters = [
