@@ -215,7 +215,14 @@ export const endpoints = [
     id: "verifyfirsttransaction",
     description:
       "Verifies the first transaction date of an Ethereum address and returns eligibility status",
-  }
+  },
+  {
+    method: "GET",
+    path: "/api/base/farcon-2025",
+    id: "verifyfarcon2025",
+    description:
+      "Verifies if an Ethereum address holds a Farcon Summit 2025 NFT ticket and returns eligibility status",
+  },
 ];
 
 export const parameters = [
