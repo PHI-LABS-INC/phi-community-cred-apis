@@ -223,6 +223,14 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address holds a Farcon Summit 2025 NFT ticket and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/kwik-claim",
+    id: "verifykwikclaim", 
+    description:
+      "Verifies if an Ethereum address has any airdrop or reward opportunities on KwikClaim and returns eligibility status",
+  }
+
 ];
 
 export const parameters = [
