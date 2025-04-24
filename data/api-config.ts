@@ -229,7 +229,14 @@ export const endpoints = [
     id: "verifykwikclaim", 
     description:
       "Verifies if an Ethereum address has any airdrop or reward opportunities on KwikClaim and returns eligibility status",
-  }
+  },
+  {
+    method: "GET",
+    path: "/api/base/farcon-hackathon",
+    id: "verifyfarconhackathon",
+    description:
+      "Verifies if an Ethereum address holds a Farcon Builders NFT and returns eligibility status",
+  },
 
 ];
 
