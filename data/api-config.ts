@@ -226,7 +226,7 @@ export const endpoints = [
   {
     method: "GET",
     path: "/api/base/kwik-claim",
-    id: "verifykwikclaim", 
+    id: "verifykwikclaim",
     description:
       "Verifies if an Ethereum address has any airdrop or reward opportunities on KwikClaim and returns eligibility status",
   },
@@ -237,7 +237,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address holds a Farcon Builders NFT and returns eligibility status",
   },
-
+  {
+    method: "GET",
+    path: "/api/ethereum/ens-holder",
+    id: "verifyensholder",
+    description:
+      "Verifies if an Ethereum address has an ENS name and returns eligibility status",
+  },
 ];
 
 export const parameters = [
