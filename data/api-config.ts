@@ -244,6 +244,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has an ENS name and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/pizza-day",
+    id: "verifypizzaday",
+    description:
+      "Verifies if an Ethereum address has made a transaction on Base on Bitcoin Pizza Day and returns eligibility status",
+  },
 ];
 
 export const parameters = [
