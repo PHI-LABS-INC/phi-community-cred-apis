@@ -9,6 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@coinbase/cdp-sdk": "^1.10.0",
+    "@coinbase/coinbase-sdk": "^0.24.0",
+    "@ethereum-attestation-service/eas-sdk": "^2.7.0",
     "@morpho-org/blue-sdk": "^2.3.0",
     "@morpho-org/blue-sdk-viem": "^2.2.1",
     "axios": "^1.7.9",
@@ -19,7 +22,7 @@
     "p-queue": "^8.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "viem": "^2.22.8"
+    "viem": "^2.29.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -251,6 +251,20 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has made a transaction on Base on Bitcoin Pizza Day and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/base/usdc-bountycaster",
+    id: "verifyusdc",
+    description:
+      "Verifies if an Ethereum address has any valid attestations from BountyCaster and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/base/base-onchain-score",
+    id: "verifybaseonchainscore",
+    description:
+      "Verifies if an Ethereum address has a Base onchain score greater than 50 and returns eligibility status",
+  },
 ];
 
 export const parameters = [
