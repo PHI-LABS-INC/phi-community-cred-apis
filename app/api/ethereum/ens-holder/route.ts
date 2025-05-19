@@ -3,10 +3,14 @@ import { Address, isAddress, createPublicClient, http } from "viem";
 import { mainnet } from "viem/chains";
 import { createSignature } from "@/app/lib/signature";
 
-// Create public client for mainnet
+if (!process.env.ETHEREUM_RPC_URL) {
+  throw new Error("ETHEREUM_RPC_URL environment variable is not set");
+}
+
+// Create public client for mainnet using RPC from environment variable
 const client = createPublicClient({
   chain: mainnet,
-  transport: http(),
+  transport: http(process.env.ETHEREUM_RPC_URL),
 });
 
 export async function GET(req: NextRequest) {
