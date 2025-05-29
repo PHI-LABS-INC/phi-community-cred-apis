@@ -132,7 +132,7 @@ async function verifyTransaction(address: Address): Promise<[boolean, string]> {
   try {
     // Fetch transaction history from Basescan API using optimized rate limiter
     const data = await fetchWithRateLimit(
-      `https://api.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${API_KEYS[0]}`
+      `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${API_KEYS[0]}`
     );
 
     // Check for API errors

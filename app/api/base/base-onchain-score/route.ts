@@ -136,7 +136,7 @@ async function verifyOnchainScore(
     }
 
     // Fetch transaction history from BaseScan API
-    const apiUrl = `https://api.basescan.org/api?module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${BASESCAN_API_KEY}`;
+    const apiUrl = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${BASESCAN_API_KEY}`;
     const response = await fetch(apiUrl);
     const data = (await response.json()) as BaseScanResponse;
 

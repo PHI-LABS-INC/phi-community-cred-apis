@@ -66,7 +66,7 @@ async function verifyPizzaDayTransact(address: Address): Promise<boolean> {
 
   // Fetch all transactions from the BaseScan API.
   // Note: We use startblock=0 and endblock=latest to get the complete history.
-  const apiUrl = `https://api.basescan.org/api?module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${BASESCAN_API_KEY}`;
+  const apiUrl = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${BASESCAN_API_KEY}`;
 
   try {
     const response = await fetch(apiUrl);

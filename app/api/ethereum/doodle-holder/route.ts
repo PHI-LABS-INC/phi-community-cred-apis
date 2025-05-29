@@ -17,7 +17,7 @@ async function verifyDoodlePurchase(address: Address): Promise<boolean> {
     }
 
     // Fetch transaction history from Etherscan API
-    const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
+    const apiUrl = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
     const response = await fetch(apiUrl);
     const data = await response.json();
 

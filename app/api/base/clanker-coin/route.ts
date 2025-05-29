@@ -56,7 +56,7 @@ async function verifyClankerCoin(address: Address): Promise<[boolean, string]> {
 
     // Query Base blockchain API for Clanker coin balance using balanceOf method
     const response = await fetch(
-      `https://api.basescan.org/api?module=account&action=tokenbalance&contractaddress=${CLANKER_CONTRACT}&address=${address}&apikey=${process.env.BASE_SCAN_API_KEY}`
+      `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=tokenbalance&contractaddress=${CLANKER_CONTRACT}&address=${address}&apikey=${process.env.BASE_SCAN_API_KEY}`
     );
 
     const data = await response.json();

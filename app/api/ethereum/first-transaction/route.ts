@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
 async function verifyTransaction(address: Address): Promise<[boolean, string]> {
   try {
     const data = await fetchWithRateLimit(
-      `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${API_KEY}`
+      `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${API_KEY}`
     );
 
     if (data.status === "0" && data.message === "NOTOK") {

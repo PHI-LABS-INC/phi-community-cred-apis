@@ -6,7 +6,7 @@ import { createSignature } from "@/app/lib/signature";
 async function verifyGasSpent(address: Address): Promise<boolean> {
   try {
     // Using BaseScan API endpoint to fetch transactions on Base
-    const BASESCAN_API_URL = `https://api.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=latest&sort=asc`;
+    const BASESCAN_API_URL = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=latest&sort=asc`;
     const response = await fetch(BASESCAN_API_URL);
     const data = await response.json();
 
@@ -29,7 +29,6 @@ async function verifyGasSpent(address: Address): Promise<boolean> {
     // Define the threshold: 0.1 ETH in wei
     const threshold = BigInt("10000000000000000000000");
     return totalGasSpent >= threshold;
-
   } catch (error) {
     console.error("Error verifying gas spent on Base:", error);
     return false;

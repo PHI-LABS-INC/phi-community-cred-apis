@@ -117,7 +117,7 @@ async function verifyTimeswapLiquidity(address: Address): Promise<[boolean]> {
 
     // Query transactions to/from the factory using Basescan API
     const data = await fetchWithRetry(
-      `https://api.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`
+      `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`
     );
 
     if (data.status === "0" && data.message === "NOTOK") {

@@ -59,7 +59,7 @@ async function verifyNounceDaoVote(address: Address): Promise<boolean> {
     }
 
     // Fetch the transaction list for the given address using Etherscan API
-    const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
+    const url = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
     const response = await fetch(url);
     const data = await response.json();
 
