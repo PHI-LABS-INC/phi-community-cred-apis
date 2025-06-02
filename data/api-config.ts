@@ -265,6 +265,41 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has a Base onchain score greater than 50 and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/ethereum/eth-validator",
+    id: "verifyethvalidator",
+    description:
+      "Verifies if an Ethereum address is a validator and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/gitcoin-contributor",
+    id: "verifygitcoincontributor",
+    description:
+      "Verifies if an Ethereum address has contributed to Gitcoin Grants and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/eth-whale",
+    id: "verifyethwhale",
+    description:
+      "Verifies if an Ethereum address holds at least 10 ETH and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/poap-enthusiast",
+    id: "verifypoapenthusiast",
+    description:
+      "Verifies if an Ethereum address has attended at least 10 POAP events and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/ethereum-og",
+    id: "verifyethereumog",
+    description:
+      "Verifies if an Ethereum address has attended at least 10 POAP events and returns eligibility status",
+  },
 ];
 
 export const parameters = [
