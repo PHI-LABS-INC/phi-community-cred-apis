@@ -26,7 +26,7 @@ async function verifyEthereumOG(address: Address): Promise<boolean> {
 
     // Use Etherscan API to get the transaction history
     // We'll get transactions in ascending order to find the earliest one
-    const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=latest&page=1&offset=1&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
+    const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=2912406&page=1&offset=1&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
 
     const response = await fetch(apiUrl);
     const data = await response.json();
@@ -39,28 +39,21 @@ async function verifyEthereumOG(address: Address): Promise<boolean> {
       // Get the first (earliest) transaction
       const firstTransaction: EtherscanTransaction = data.result[0];
 
-      // Convert timestamp to date (Etherscan timestamps are in seconds)
-      const transactionDate = new Date(
-        parseInt(firstTransaction.timeStamp) * 1000
-      );
-
-      // Check if the transaction was before January 1, 2017
-      const january2017 = new Date("2017-01-01T00:00:00Z");
-
-      const isOG = transactionDate < january2017;
+      // Check if the transaction block number is before or equal to block 2912406 (Dec 31, 2016)
+      const isOG = parseInt(firstTransaction.blockNumber) <= 2912406;
 
       console.log(
-        `Address ${address} first transaction: ${transactionDate.toISOString()}, OG status: ${isOG}`
+        `Address ${address} first transaction block: ${firstTransaction.blockNumber}, 2016 status: ${isOG}`
       );
 
       return isOG;
     }
 
-    // If no transactions found, not an OG
-    console.log(`Address ${address} has no transactions`);
+    // If no transactions found, not eligible
+    console.log(`Address ${address} has no transactions before block 2912406`);
     return false;
   } catch (error) {
-    console.error("Error verifying Ethereum OG status:", {
+    console.error("Error verifying Ethereum 2016 status:", {
       error,
       address,
       timestamp: new Date().toISOString(),

@@ -288,10 +288,17 @@ export const endpoints = [
   },
   {
     method: "GET",
-    path: "/api/ethereum/ethereum-og",
-    id: "verifyethereumog",
+    path: "/api/ethereum/ethereum-og-2016",
+    id: "verifyethereumog2016",
     description:
-      "Verifies if an Ethereum address has attended at least 10 POAP events and returns eligibility status",
+      "Verifies if an Ethereum address has made a transaction on Ethereum in 2016 and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/ethereum-og-2018",
+    id: "verifyethereumog2018",
+    description:
+      "Verifies if an Ethereum address has made a transaction on Ethereum in 2018 and returns eligibility status",
   },
 ];
 
