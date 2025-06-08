@@ -300,6 +300,48 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has made a transaction on Ethereum in 2018 and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/ethereum/efp-influencer",
+    id: "verifyefpinfluencer",
+    description:
+      "Verifies if an Ethereum address has 100+ followers on EFP (Ethereum Follow Protocol) and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/ethereum-network-guardian",
+    id: "verifyethereumnetworkguardian",
+    description:
+      "Verifies if an Ethereum address has staked any amount of ETH on Lido by checking stETH balance and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/dao-citizen",
+    id: "verifydaocitizen",
+    description:
+      "Verifies if an Ethereum address has voted at least 1 time on Snapshot governance platform and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/onchain-writer",
+    id: "verifyonchainwriter",
+    description:
+      "Verifies if an Ethereum address has published content on Paragraph by checking NFT ownership and contract interactions and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/superchain-voyager",
+    id: "verifysuperchainvoyager",
+    description:
+      "Verifies if an Ethereum address has made transactions on 3 or more Superchain networks (OP Stack chains) and returns eligibility status",
+  },
+  {
+    method: "GET",
+    path: "/api/farcaster/influencer",
+    id: "verifyfarcasterinfluencer",
+    description:
+      "Verifies if an Ethereum address has more than 1000 followers on Farcaster and returns eligibility status",
+  },
 ];
 
 export const parameters = [
