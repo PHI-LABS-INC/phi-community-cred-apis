@@ -340,7 +340,7 @@ export const endpoints = [
     path: "/api/farcaster/influencer",
     id: "verifyfarcasterinfluencer",
     description:
-      "Verifies if an Ethereum address has more than 1000 followers on Farcaster and returns eligibility status",
+      "Verifies if an Ethereum address has more than 500 followers on Farcaster and returns eligibility status",
   },
 ];
 

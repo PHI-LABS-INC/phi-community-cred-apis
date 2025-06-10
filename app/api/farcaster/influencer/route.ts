@@ -44,7 +44,7 @@ async function verifyFarcasterInfluencer(address: Address): Promise<boolean> {
     const followerCount = profile.social.follower;
     console.log(`Found ${followerCount} followers for address ${address}`);
 
-    return followerCount > 1000;
+    return followerCount > 500;
   } catch (error) {
     console.error("Error verifying Farcaster Influencer status:", {
       error,
