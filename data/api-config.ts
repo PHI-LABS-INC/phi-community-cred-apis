@@ -342,6 +342,41 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has more than 500 followers on Farcaster and returns eligibility status",
   },
+  {
+    method: "GET",
+    path: "/api/ethereum/poap-collector",
+    id: "verifypoapcollector",
+    description:
+      "Verifies if an Ethereum address has collected more than 50 POAPs and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/token-approval-revoker",
+    id: "verifytokenapprovalrevoker",
+    description:
+      "Verifies if an Ethereum address has revoked token approvals at least once and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/delegate-caller",
+    id: "verifydelegatecaller",
+    description:
+      "Verifies if an Ethereum address has called the delegate method at least once and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/zora-content-coin-buyer",
+    id: "verifyzoracontentcoinbuyer",
+    description:
+      "Verifies if an Ethereum address has purchased Content Coins within 30 days after Zora's Content Coin feature launch and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/historic-nft-holder",
+    id: "verifyhistoricnftholder",
+    description:
+      "Verifies if an Ethereum address has held any of the following NFTs in the past and returns eligibility status with cryptographic signature",
+  },
 ];
 
 export const parameters = [
