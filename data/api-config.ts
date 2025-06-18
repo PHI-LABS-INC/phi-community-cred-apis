@@ -377,6 +377,48 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has held any of the following NFTs in the past and returns eligibility status with cryptographic signature",
   },
+  {
+    method: "GET",
+    path: "/api/base/onchain-100x",
+    id: "verifyonchain100x",
+    description:
+      "Verifies if an Ethereum address has made 100+ transactions on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/bridged-based",
+    id: "verifybridgedbased",
+    description:
+      "Verifies if an Ethereum address has bridged at least 1 ETH (cumulative) into Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/base-nft-holder",
+    id: "verifybasenftholder",
+    description:
+      "Verifies if an Ethereum address has collected 10+ NFTs on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/gas-burner",
+    id: "verifygasburner",
+    description:
+      "Verifies if an Ethereum address has spent 0.05 ETH+ in gas fees on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/base-genesis",
+    id: "verifybasegenesis",
+    description:
+      "Verifies if an Ethereum address minted during the first 30 days of Base Mainnet and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/base-defi-trader",
+    id: "verifybasedefitrader",
+    description:
+      "Verifies if an Ethereum address has made at least 30 trades on Base DEXs (Aerodrome, Uniswap, BaseSwap, etc.) and returns eligibility status with cryptographic signature",
+  },
 ];
 
 export const parameters = [
