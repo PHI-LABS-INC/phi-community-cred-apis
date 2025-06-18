@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Address, isAddress, formatEther, parseEther } from "viem";
+import { Address, isAddress, parseEther } from "viem";
 import { createSignature } from "@/app/lib/signature";
 
 const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_01;
