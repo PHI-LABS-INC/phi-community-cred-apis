@@ -31,16 +31,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [mint_eligibility, data] = await verifyParagraphPost(
-      address as Address
-    );
+    const mint_eligibility = await verifyParagraphPost(address as Address);
 
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
@@ -64,9 +62,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-async function verifyParagraphPost(
-  address: Address
-): Promise<[boolean, number]> {
+async function verifyParagraphPost(address: Address): Promise<boolean> {
   try {
     console.log("Checking Paragraph posts for address:", address);
 
@@ -111,9 +107,9 @@ async function verifyParagraphPost(
     const postCount = posts.length;
     const hasPosted = postCount > 0;
 
-    return [hasPosted, postCount];
+    return hasPosted;
   } catch (error) {
     console.error("Error verifying Paragraph post:", error);
-    return [false, 0];
+    return false;
   }
 }
