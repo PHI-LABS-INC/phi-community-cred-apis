@@ -78,6 +78,7 @@ async function fetchWithRateLimit(
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
+  const addresses = req.nextUrl.searchParams.get("addresses");
 
   if (!address || !isAddress(address)) {
     return NextResponse.json(
@@ -87,23 +88,34 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Get transaction verification results with retries
-    let result;
-    for (let i = 0; i < 3; i++) {
+    const addressesToCheck: Address[] = [address as Address];
+    if (addresses) {
+      const additionalAddresses = addresses
+        .split(",")
+        .map((addr) => addr.trim())
+        .filter((addr) => isAddress(addr)) as Address[];
+      addressesToCheck.push(...additionalAddresses);
+    }
+    let mint_eligibility = false;
+    let data = "0";
+    for (const addr of addressesToCheck) {
       try {
-        result = await verifyTransaction(address as Address);
-        break;
+        const [eligible, txCount] = await verifyTransaction(addr);
+        // If this address is eligible, mark as eligible and break
+        if (eligible) {
+          mint_eligibility = true;
+          data = txCount;
+          break; // Found eligible address, no need to check others
+        }
       } catch (error) {
-        if (i === 2) throw error; // Throw on final attempt
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1))); // Linear backoff
+        console.warn(`Error checking address ${addr}:`, error);
+        // Continue to next address instead of failing entirely
       }
     }
 
-    const [mint_eligibility, data] = result!;
-
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
-      address: address as Address,
+      address: address as Address, // Always use the primary address for signature
       mint_eligibility,
       data,
     });

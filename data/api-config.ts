@@ -419,6 +419,41 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has made at least 30 trades on Base DEXs (Aerodrome, Uniswap, BaseSwap, etc.) and returns eligibility status with cryptographic signature",
   },
+  {
+    method: "GET",
+    path: "/api/ethereum/nouns-governance-participant",
+    id: "verifynounsgovernanceparticipant",
+    description:
+      "Verifies if an Ethereum address has participated in Nouns DAO governance and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/nouns-holder",
+    id: "verifynounsholder",
+    description:
+      "Verifies if an Ethereum address has held a Nouns NFT and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/nouns-auction-bidder",
+    id: "verifynounsauctionbidder",
+    description:
+      "Verifies if an Ethereum address has placed a bid in a Nouns auction and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/nounce-supporter",
+    id: "verifynounce",
+    description:
+      "Verifies if an Ethereum address has held a Support NFT and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/artblocks-purchaser",
+    id: "verifyartblockspurchaser",
+    description:
+      "Verifies if an Ethereum address has purchased an ArtBlocks NFT and returns eligibility status with cryptographic signature",
+  },
 ];
 
 export const parameters = [
