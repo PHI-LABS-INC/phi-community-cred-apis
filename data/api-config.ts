@@ -454,6 +454,41 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has purchased an ArtBlocks NFT and returns eligibility status with cryptographic signature",
   },
+  {
+    method: "GET",
+    path: "/api/base/casts-100-club",
+    id: "verifycastsclub",
+    description:
+      "Verifies if an Ethereum address has made 100+ casts on Farcaster and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/recast-royalty",
+    id: "verifyrecastroyalty",
+    description:
+      "Verifies if an Ethereum address has received 50+ total recasts across all posts on Farcaster and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/degen-believer",
+    id: "verifydegenbeliever",
+    description:
+      "Verifies if an Ethereum address has tipped or received 1,000+ $DEGEN tokens on Farcaster and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/app-crafter",
+    id: "verifyappcrafter",
+    description:
+      "Verifies if an Ethereum address has published mini apps used by 50+ unique users on Farcaster and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/rounds-reward-winner",
+    id: "verifyroundsreward",
+    description:
+      "Verifies if an Ethereum address has won Farcaster Rounds rewards 3+ times and returns eligibility status with cryptographic signature",
+  },
 ];
 
 export const parameters = [
