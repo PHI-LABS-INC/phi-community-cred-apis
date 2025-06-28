@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_01;
 
@@ -26,11 +27,11 @@ interface BaseScanResponse {
   result: BaseScanTransaction[];
 }
 
-async function verifyDeFiTrades(address: Address): Promise<[boolean, number]> {
+async function verifyDeFiTrades(address: Address): Promise<[boolean, string]> {
   try {
     if (!BASESCAN_API_KEY) {
       console.error("Missing required BaseScan API key");
-      return [false, 0];
+      return [false, "0"];
     }
 
     console.log(`[DEBUG] Fetching transactions for address: ${address}`);
@@ -42,14 +43,14 @@ async function verifyDeFiTrades(address: Address): Promise<[boolean, number]> {
 
     if (data.status !== "1" || !Array.isArray(data.result)) {
       console.error("Error fetching transaction data from BaseScan:", data);
-      return [false, 0];
+      return [false, "0"];
     }
 
     const transactions = data.result;
     console.log(`[DEBUG] Total transactions found: ${transactions.length}`);
 
     if (transactions.length === 0) {
-      return [false, 0];
+      return [false, "0"];
     }
 
     // DEX contract addresses on Base
@@ -136,14 +137,14 @@ async function verifyDeFiTrades(address: Address): Promise<[boolean, number]> {
     console.log(`[DEBUG] Total trades found: ${tradeCount}`);
     // Check if the address has made at least 30 trades
     const isEligible = tradeCount >= 30;
-    return [isEligible, tradeCount];
+    return [isEligible, tradeCount.toString()];
   } catch (error) {
     console.error("Error verifying DeFi trades:", {
       error,
       address,
       timestamp: new Date().toISOString(),
     });
-    return [false, 0];
+    return [false, "0"];
   }
 }
 
@@ -161,19 +162,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [mint_eligibility, tradeCount] = await verifyDeFiTrades(
-      address as Address
-    );
+    const result = await verifyMultipleWallets(req, verifyDeFiTrades);
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data: tradeCount.toString(),
+      mint_eligibility: result.mint_eligibility,
+      data: result.data || "0",
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility,
-        data: tradeCount,
+        mint_eligibility: result.mint_eligibility,
+        data: parseInt(result.data || "0"),
         signature,
       }),
       {

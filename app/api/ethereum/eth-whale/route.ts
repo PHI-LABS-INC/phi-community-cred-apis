@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 async function verifyEthWhale(address: Address): Promise<boolean> {
   try {
@@ -51,9 +52,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await verifyEthWhale(address as Address);
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifyEthWhale
+    );
+
     const signature = await createSignature({
-      address: address as Address,
+      address: address as Address, // Always use the primary address for signature
       mint_eligibility,
     });
 

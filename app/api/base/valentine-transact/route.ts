@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_01;
 
@@ -16,19 +17,20 @@ export async function GET(req: NextRequest) {
 
   try {
     // Verify if the wallet has made any transaction on Base on Valentine's Day.
-    const transactedOnValentines = await verifyValentinesTransact(
-      address as Address
+    const result = await verifyMultipleWalletsSimple(
+      req,
+      verifyValentinesTransact
     );
 
     // Generate a signature including the verification result.
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: transactedOnValentines,
+      mint_eligibility: result.mint_eligibility,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility: transactedOnValentines,
+        mint_eligibility: result.mint_eligibility,
         signature,
       }),
       {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 // Neynar API configuration
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
@@ -164,15 +165,15 @@ async function getUserDegenActivity(fid: number): Promise<number> {
 
 async function verifyDegenBeliever(
   address: Address
-): Promise<{ eligible: boolean; degenAmount: number }> {
+): Promise<[boolean, string]> {
   try {
     const fid = await getFidFromAddress(address);
     if (!fid) {
-      return { eligible: false, degenAmount: 0 };
+      return [false, "0"];
     }
 
     const degenAmount = await getUserDegenActivity(fid);
-    return { eligible: degenAmount >= 1000, degenAmount };
+    return [degenAmount >= 1000, degenAmount.toString()];
   } catch (error) {
     console.error("Error verifying DEGEN believer:", {
       error,
@@ -189,7 +190,6 @@ async function verifyDegenBeliever(
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
-  const addresses = req.nextUrl.searchParams.get("addresses");
 
   if (!address || !isAddress(address)) {
     return NextResponse.json(
@@ -206,39 +206,20 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const addressesToCheck: Address[] = [address as Address];
-    if (addresses) {
-      const additionalAddresses = addresses
-        .split(",")
-        .map((addr) => addr.trim())
-        .filter((addr) => isAddress(addr)) as Address[];
-      addressesToCheck.push(...additionalAddresses);
-    }
-
-    let mint_eligibility = false;
-    let data = "0";
-
-    for (const addr of addressesToCheck) {
-      try {
-        const result = await verifyDegenBeliever(addr);
-        if (result.eligible) {
-          mint_eligibility = true;
-          data = result.degenAmount.toString();
-          break;
-        }
-      } catch (error) {
-        console.warn(`Error checking address ${addr}:`, error);
-      }
-    }
+    const result = await verifyMultipleWallets(req, verifyDegenBeliever);
 
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data,
+      mint_eligibility: result.mint_eligibility,
+      data: result.data,
     });
 
     return NextResponse.json(
-      { mint_eligibility, data, signature },
+      {
+        mint_eligibility: result.mint_eligibility,
+        data: result.data,
+        signature,
+      },
       { status: 200 }
     );
   } catch (error) {

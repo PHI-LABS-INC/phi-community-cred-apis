@@ -2,21 +2,24 @@ import { NextRequest } from "next/server";
 import { Address, isAddress, createPublicClient, http } from "viem";
 import { base } from "viem/chains";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 // Create public client for Base chain
 const client = createPublicClient({
   chain: base,
-  transport: http()
+  transport: http(),
 });
 
 // Bento token ABI for balanceOf
-const bentoABI = [{
-  "inputs": [{"name": "account", "type": "address"}],
-  "name": "balanceOf",
-  "outputs": [{"name": "", "type": "uint256"}],
-  "stateMutability": "view",
-  "type": "function"
-}] as const;
+const bentoABI = [
+  {
+    inputs: [{ name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,20 +36,21 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const mint_eligibility = await verifyBentoToken(
-      address as Address
-    );
+    const result = await verifyMultipleWalletsSimple(req, verifyBentoToken);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
+      mint_eligibility: result.mint_eligibility,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, signature }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ mint_eligibility: result.mint_eligibility, signature }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error in handler:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
@@ -66,14 +70,15 @@ export async function GET(req: NextRequest) {
 async function verifyBentoToken(address: Address): Promise<boolean> {
   try {
     // Bento token contract address
-    const BENTO_CONTRACT = "0x9de16c805a3227b9b92e39a446f9d56cf59fe640" as const;
+    const BENTO_CONTRACT =
+      "0x9de16c805a3227b9b92e39a446f9d56cf59fe640" as const;
 
     // Direct contract call to get balance
     const balance = await client.readContract({
       address: BENTO_CONTRACT,
       abi: bentoABI,
-      functionName: 'balanceOf',
-      args: [address]
+      functionName: "balanceOf",
+      args: [address],
     });
 
     console.log(balance);
@@ -82,8 +87,6 @@ async function verifyBentoToken(address: Address): Promise<boolean> {
     return Number(balance) > 0;
   } catch (error) {
     console.error("Error verifying Bento token:", error);
-    throw new Error("Failed to verify Bento token balance"); 
+    throw new Error("Failed to verify Bento token balance");
   }
 }
-
-

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_02;
 
@@ -89,19 +90,22 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await verifyNFTHoldings(address as Address);
+    const result = await verifyMultipleWalletsSimple(req, verifyNFTHoldings);
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
+      mint_eligibility: result.mint_eligibility,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, signature }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-      },
-    });
+    return new Response(
+      JSON.stringify({ mint_eligibility: result.mint_eligibility, signature }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error processing GET request:", {
       error,

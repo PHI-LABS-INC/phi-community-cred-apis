@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_01;
 
@@ -16,17 +17,17 @@ export async function GET(req: NextRequest) {
 
   try {
     // Verify if the wallet has made any transaction on Base in August 2023.
-    const transactedInAugust = await verifyAugustTransact(address as Address);
+    const result = await verifyMultipleWalletsSimple(req, verifyAugustTransact);
 
     // Generate a signature including the verification result.
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: transactedInAugust,
+      mint_eligibility: result.mint_eligibility,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility: transactedInAugust,
+        mint_eligibility: result.mint_eligibility,
         signature,
       }),
       {

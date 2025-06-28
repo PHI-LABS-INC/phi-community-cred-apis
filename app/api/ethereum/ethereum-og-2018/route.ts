@@ -1,34 +1,28 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
-interface EtherscanTransaction {
-  blockNumber: string;
-  timeStamp: string;
-  hash: string;
-  from: string;
-  to: string;
-  value: string;
-  gas: string;
-  gasPrice: string;
-  gasUsed: string;
-  isError: string;
-}
-
-async function verifyEthereumOG(address: Address): Promise<boolean> {
+async function verifyEthereumOG2018(address: Address): Promise<boolean> {
   try {
-    const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+    console.log("Checking Ethereum OG 2018 status for address:", address);
 
-    if (!ETHERSCAN_API_KEY) {
-      console.error("Missing Etherscan API key");
+    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+    if (!etherscanApiKey) {
+      console.error("ETHERSCAN_API_KEY not found");
       return false;
     }
 
-    // Use Etherscan API to get the transaction history
-    // We'll get transactions in ascending order to find the earliest one
-    const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=6985879&page=1&offset=1&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
+    // Get the earliest transactions to check account creation date
+    // Block 7000000 is approximately end of 2018
+    const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=7000000&sort=asc&page=1&offset=10&apikey=${etherscanApiKey}`;
 
-    const response = await fetch(apiUrl);
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error("Failed to fetch from Etherscan:", response.statusText);
+      return false;
+    }
+
     const data = await response.json();
 
     if (
@@ -36,28 +30,27 @@ async function verifyEthereumOG(address: Address): Promise<boolean> {
       Array.isArray(data.result) &&
       data.result.length > 0
     ) {
-      // Get the first (earliest) transaction
-      const firstTransaction: EtherscanTransaction = data.result[0];
+      // Get the first transaction timestamp
+      const firstTransaction = data.result[0];
+      const firstTxTimestamp = parseInt(firstTransaction.timeStamp) * 1000;
+      const firstTxDate = new Date(firstTxTimestamp);
 
-      // Check if the transaction block number is before or equal to block 6985879 (Dec 31, 2018)
-      const isOG = parseInt(firstTransaction.blockNumber) <= 6985879;
+      // Check if the first transaction was in 2018 or earlier
+      const is2018OG = firstTxDate.getFullYear() <= 2018;
 
       console.log(
-        `Address ${address} first transaction block: ${firstTransaction.blockNumber}, 2018 status: ${isOG}`
+        `Address ${address} first transaction: ${firstTxDate.toISOString()}`
       );
+      console.log(`Is 2018 OG: ${is2018OG}`);
 
-      return isOG;
+      return is2018OG;
     }
 
-    // If no transactions found, not eligible
-    console.log(`Address ${address} has no transactions before block 6985879`);
+    // If no transactions found, check if address was created through other means
+    console.log(`No transactions found for address ${address} in early blocks`);
     return false;
   } catch (error) {
-    console.error("Error verifying Ethereum 2018 status:", {
-      error,
-      address,
-      timestamp: new Date().toISOString(),
-    });
+    console.error("Error verifying Ethereum OG 2018 status:", error);
     return false;
   }
 }
@@ -76,9 +69,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await verifyEthereumOG(address as Address);
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifyEthereumOG2018
+    );
+
     const signature = await createSignature({
-      address: address as Address,
+      address: address as Address, // Always use the primary address for signature
       mint_eligibility,
     });
 

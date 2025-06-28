@@ -1,6 +1,7 @@
 import { createSignature } from "@/app/lib/signature";
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 // OpenSea API Endpoint
 const OPENSEA_API_URL = "https://api.opensea.io/api/v2/chain/base/account";
@@ -16,7 +17,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * @param address - Ethereum address to check
  * @returns {Promise<[boolean]>} - Tuple containing eligibility status and number of NFTs
  */
-async function getNFTCountOnOpenSeaBase(address: Address): Promise<[boolean]> {
+async function getNFTCountOnOpenSeaBase(address: Address): Promise<boolean> {
   for (let attempts = 0; attempts < MAX_RETRIES; attempts++) {
     try {
       const url = `${OPENSEA_API_URL}/${address}/nfts`;
@@ -30,12 +31,12 @@ async function getNFTCountOnOpenSeaBase(address: Address): Promise<[boolean]> {
 
       if (!response.ok) {
         console.error("Error fetching OpenSea data:", response.statusText);
-        continue; 
+        continue;
       }
 
       const data = await response.json();
       const nftCount = data.nfts?.length || 0;
-      return [nftCount > 0];
+      return nftCount > 0;
     } catch (error) {
       console.error("Error checking NFTs on OpenSea:", error);
       if (attempts === MAX_RETRIES - 1) {
@@ -45,7 +46,7 @@ async function getNFTCountOnOpenSeaBase(address: Address): Promise<[boolean]> {
     }
   }
 
-  return [false];
+  return false;
 }
 
 /**
@@ -68,17 +69,18 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [mint_eligibility] = await getNFTCountOnOpenSeaBase(
-      address as Address
+    const result = await verifyMultipleWalletsSimple(
+      req,
+      getNFTCountOnOpenSeaBase
     );
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
+      mint_eligibility: result.mint_eligibility,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility,
+        mint_eligibility: result.mint_eligibility,
         signature,
       }),
       {

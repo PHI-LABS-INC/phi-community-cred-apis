@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 const API_KEY = process.env.BASE_SCAN_API_KEY;
 if (!API_KEY) {
@@ -67,19 +68,20 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const [mint_eligibility] = await verifyTimeswapLiquidity(
-      address as Address
+    const result = await verifyMultipleWalletsSimple(
+      req,
+      verifyTimeswapLiquidity
     );
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: mint_eligibility as boolean,
+      mint_eligibility: result.mint_eligibility,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility: mint_eligibility as boolean,
+        mint_eligibility: result.mint_eligibility,
         signature,
       }),
       {
@@ -110,7 +112,7 @@ export async function GET(req: NextRequest) {
  * @param address - Ethereum address to check
  * @returns Tuple containing [boolean eligibility status]
  */
-async function verifyTimeswapLiquidity(address: Address): Promise<[boolean]> {
+async function verifyTimeswapLiquidity(address: Address): Promise<boolean> {
   try {
     // Timeswap V2 Factory contract on Base
     const TIMESWAP_FACTORY = "0xA68dF33b095c2897123416cbd517ed314E46fF62";
@@ -127,7 +129,7 @@ async function verifyTimeswapLiquidity(address: Address): Promise<[boolean]> {
     }
 
     if (!data.result || !Array.isArray(data.result)) {
-      return [false];
+      return false;
     }
 
     // Check if any transactions were interactions with Timeswap Factory
@@ -137,7 +139,7 @@ async function verifyTimeswapLiquidity(address: Address): Promise<[boolean]> {
         tx.isError === "0"
     );
 
-    return [hasProvidedLiquidity];
+    return hasProvidedLiquidity;
   } catch (error) {
     console.error("Error verifying Timeswap liquidity:", error);
     throw new Error(

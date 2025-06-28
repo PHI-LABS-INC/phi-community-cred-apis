@@ -1,6 +1,7 @@
 import { useApi } from "@/app/context/ApiContext";
 import { endpoints, parameters } from "@/data/api-config";
 import EndpointSection from "./EndpointSection";
+import ApiHealthChecker from "./ApiHealthChecker";
 
 export default function ApiContent() {
   const { activeEndpoint } = useApi();
@@ -15,7 +16,11 @@ export default function ApiContent() {
           A comprehensive API for verifying and managing PHI community creds
           through seamless PHI.box integration
         </p>
-        <div className="prose prose-slate max-w-none">
+
+        {/* API Health Checker */}
+        <ApiHealthChecker />
+
+        <div className="prose prose-slate max-w-none mt-8">
           <h2 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">
             API-Based Cred Verification
           </h2>

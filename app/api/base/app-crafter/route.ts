@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 // Neynar API configuration
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
@@ -67,7 +68,6 @@ async function getUserMiniApps(
   fid: number
 ): Promise<{ hasEligibleApp: boolean; maxUsers: number }> {
   try {
-    // Note: This is a hypothetical endpoint - the actual Neynar API may not have this exact endpoint
     // In a real implementation, you might need to:
     // 1. Check the user's casts for mini app announcements
     // 2. Use a different API that tracks mini app usage
@@ -206,17 +206,15 @@ async function checkMiniAppsFromCasts(
   }
 }
 
-async function verifyAppCrafter(
-  address: Address
-): Promise<{ eligible: boolean; maxUsers: number }> {
+async function verifyAppCrafter(address: Address): Promise<[boolean, string]> {
   try {
     const fid = await getFidFromAddress(address);
     if (!fid) {
-      return { eligible: false, maxUsers: 0 };
+      return [false, "0"];
     }
 
     const result = await getUserMiniApps(fid);
-    return { eligible: result.hasEligibleApp, maxUsers: result.maxUsers };
+    return [result.hasEligibleApp, result.maxUsers.toString()];
   } catch (error) {
     console.error("Error verifying app crafter:", {
       error,
@@ -233,7 +231,6 @@ async function verifyAppCrafter(
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
-  const addresses = req.nextUrl.searchParams.get("addresses");
 
   if (!address || !isAddress(address)) {
     return NextResponse.json(
@@ -250,39 +247,20 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const addressesToCheck: Address[] = [address as Address];
-    if (addresses) {
-      const additionalAddresses = addresses
-        .split(",")
-        .map((addr) => addr.trim())
-        .filter((addr) => isAddress(addr)) as Address[];
-      addressesToCheck.push(...additionalAddresses);
-    }
-
-    let mint_eligibility = false;
-    let data = "0";
-
-    for (const addr of addressesToCheck) {
-      try {
-        const result = await verifyAppCrafter(addr);
-        if (result.eligible) {
-          mint_eligibility = true;
-          data = result.maxUsers.toString();
-          break;
-        }
-      } catch (error) {
-        console.warn(`Error checking address ${addr}:`, error);
-      }
-    }
+    const result = await verifyMultipleWallets(req, verifyAppCrafter);
 
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data,
+      mint_eligibility: result.mint_eligibility,
+      data: result.data,
     });
 
     return NextResponse.json(
-      { mint_eligibility, data, signature },
+      {
+        mint_eligibility: result.mint_eligibility,
+        data: result.data,
+        signature,
+      },
       { status: 200 }
     );
   } catch (error) {

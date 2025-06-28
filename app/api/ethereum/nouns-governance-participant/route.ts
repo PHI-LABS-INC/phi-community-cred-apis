@@ -1,6 +1,95 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
+
+// Nouns DAO Governor contract address
+const NOUNS_DAO_GOVERNOR = "0x6f3E6272A167e8AcCb32072d08E0957F9c79223d";
+
+async function verifyNounsGovernanceParticipant(
+  address: Address
+): Promise<boolean> {
+  try {
+    console.log(
+      "Checking Nouns governance participation for address:",
+      address
+    );
+
+    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+    if (!etherscanApiKey) {
+      console.error("ETHERSCAN_API_KEY not found");
+      return false;
+    }
+
+    // Check transactions to Nouns DAO Governor contract
+    const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=latest&sort=desc&apikey=${etherscanApiKey}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error("Failed to fetch from Etherscan:", response.statusText);
+      return false;
+    }
+
+    const data = await response.json();
+
+    if (data.status === "1" && Array.isArray(data.result)) {
+      // Look for transactions to the Nouns DAO Governor contract
+      const governanceTransactions = data.result.filter(
+        (tx: { to?: string; isError: string; input: string }) =>
+          tx.to?.toLowerCase() === NOUNS_DAO_GOVERNOR.toLowerCase() &&
+          tx.isError === "0" && // Only successful transactions
+          tx.input &&
+          tx.input.length > 2 // Has input data
+      );
+
+      if (governanceTransactions.length > 0) {
+        // Filter for governance-related transactions
+        const participationTransactions = governanceTransactions.filter(
+          (tx: { input: string }) => {
+            // Common governance method signatures:
+            // propose(...) - 0xda95691a, 0x7d5e81e2, etc.
+            // castVote(uint256,uint8) - 0x56781388
+            // castVoteWithReason(uint256,uint8,string) - 0x7b3c71d3
+            // castVoteBySig(uint256,uint8,uint8,bytes32,bytes32) - 0x3bccf4fd
+            // delegate(address) - 0x5c19a95c
+            // delegateBySig(address,uint256,uint256,uint8,bytes32,bytes32) - 0xc3cda520
+            const governanceMethodIds = [
+              "0xda95691a", // propose (common signature)
+              "0x7d5e81e2", // propose (another variant)
+              "0x56781388", // castVote
+              "0x7b3c71d3", // castVoteWithReason
+              "0x3bccf4fd", // castVoteBySig
+              "0x5c19a95c", // delegate
+              "0xc3cda520", // delegateBySig
+              "0x15373e3d", // queue
+              "0xfe0d94c1", // execute
+              "0x40e58ee5", // cancel
+            ];
+
+            return governanceMethodIds.some((methodId) =>
+              tx.input.startsWith(methodId)
+            );
+          }
+        );
+
+        if (participationTransactions.length > 0) {
+          console.log(
+            `Address ${address} has ${participationTransactions.length} governance participation transaction(s) in Nouns DAO`
+          );
+          return true;
+        }
+      }
+    }
+
+    console.log(
+      `No Nouns governance participation found for address ${address}`
+    );
+    return false;
+  } catch (error) {
+    console.error("Error verifying Nouns governance participation:", error);
+    return false;
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,113 +105,36 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check if the address has participated in Nouns DAO governance
-    const hasParticipatedInGovernance =
-      await verifyNounsGovernanceParticipation(address as Address);
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifyNounsGovernanceParticipant
+    );
 
-    // Generate cryptographic signature of the verification result
     const signature = await createSignature({
-      address: address as Address,
-      mint_eligibility: hasParticipatedInGovernance,
+      address: address as Address, // Always use the primary address for signature
+      mint_eligibility,
     });
 
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (error) {
+    console.error("Error processing GET request:", {
+      error,
+      timestamp: new Date().toISOString(),
+    });
     return new Response(
       JSON.stringify({
-        mint_eligibility: hasParticipatedInGovernance,
-        signature,
+        error: error instanceof Error ? error.message : "Internal server error",
       }),
       {
-        status: 200,
+        status: 500,
         headers: { "Content-Type": "application/json" },
       }
     );
-  } catch (error) {
-    console.error(
-      "Error in Nouns DAO governance participation verification:",
-      error
-    );
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-}
-
-/**
- * Verifies if the given address has participated in Nouns DAO governance by voting on at least 1 proposal.
- *
- * This function uses the Etherscan API to fetch the transaction history
- * of the provided address and checks if any transaction was made to the Nouns DAO governance contract's voting functions.
- *
- * @param address - Ethereum address to check
- * @returns Boolean indicating if the address has voted on at least 1 proposal
- * @throws Error if the verification process fails
- */
-async function verifyNounsGovernanceParticipation(
-  address: Address
-): Promise<boolean> {
-  try {
-    const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
-    if (!ETHERSCAN_API_KEY) {
-      throw new Error("Missing Etherscan API key");
-    }
-
-    // Fetch the transaction list for the given address using Etherscan API
-    const url = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (!Array.isArray(data.result)) {
-      console.error("Etherscan API error: result is not an array", data);
-      throw new Error("Failed to fetch transactions from Etherscan");
-    }
-
-    // If no transactions are found (Etherscan returns status "0" with an empty result), treat it as a valid case.
-    if (
-      data.status !== "1" &&
-      !(data.status === "0" && data.result.length === 0)
-    ) {
-      console.error("Etherscan API error:", data);
-      throw new Error("Failed to fetch transactions from Etherscan");
-    }
-
-    // Nouns DAO governance contract addresses (proxy and implementations)
-    const nounsDAOContracts = [
-      "0x6f3e6272a167e8accb32072d08e0957f9c79223d", // Nouns DAO Proxy (main governance contract)
-    ];
-
-    // Function signatures for voting in Nouns DAO
-    const voteFunctionSignatures = [
-      "0x7b3c71d3", // castVoteWithReason(uint256,uint8,string)
-      "0x3bccf4fd", // castVoteBySig(uint256,uint8,uint8,bytes32,bytes32)
-      "0x56781388", // castVote(uint256,uint8)
-      "0x8136730f", // castRefundableVoteWithReason(uint256,uint8,string)
-      "0x64c05995", // castRefundableVoteWithReason(uint256,uint8,string)
-      "0x44fac8f6", // castRefundableVote(uint256,uint8)
-      "0x8f1447d9", // castRefundableVote(uint256,uint8)
-    ];
-
-    // Check if any transaction to the Nouns DAO governance contract's voting functions occurred
-    const hasVotedInGovernance = data.result.some(
-      (tx: { to: string; input: string }) => {
-        return (
-          tx.to &&
-          nounsDAOContracts.some(
-            (contract) => tx.to.toLowerCase() === contract
-          ) &&
-          voteFunctionSignatures.some((signature) =>
-            tx.input.startsWith(signature)
-          )
-        );
-      }
-    );
-
-    return hasVotedInGovernance;
-  } catch (error) {
-    console.error(
-      "Error verifying Nouns DAO governance participation via Etherscan:",
-      error
-    );
-    throw new Error("Failed to verify Nouns DAO governance participation");
   }
 }

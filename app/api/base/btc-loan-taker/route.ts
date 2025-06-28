@@ -3,6 +3,7 @@ import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import crypto from "crypto";
 import axios from "axios";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,18 +20,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify BTC loan status
-    const [mintEligibility, loanData] = await verifyBTCLoan(address as Address);
+    const result = await verifyMultipleWallets(req, verifyBTCLoan);
 
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: mintEligibility,
-      data: loanData,
+      mint_eligibility: result.mint_eligibility,
+      data: result.data || "No loan data",
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility: mintEligibility,
-        data: loanData,
+        mint_eligibility: result.mint_eligibility,
+        data: result.data || "No loan data",
         signature,
       }),
       {

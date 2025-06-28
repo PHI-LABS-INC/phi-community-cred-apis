@@ -1,24 +1,95 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-import { createPublicClient, http } from "viem";
-import { mainnet } from "viem/chains";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
-const client = createPublicClient({
-  chain: mainnet,
-  transport: http(),
-});
+async function verifyHistoricNFTHolder(address: Address): Promise<boolean> {
+  try {
+    console.log("Checking historic NFT ownership for address:", address);
 
-// Contract ABI for ERC721 balanceOf
-const ERC721_ABI = [
-  {
-    inputs: [{ internalType: "address", name: "owner", type: "address" }],
-    name: "balanceOf",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-];
+    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+    if (!etherscanApiKey) {
+      console.error("ETHERSCAN_API_KEY not found");
+      return false;
+    }
+
+    // Historic/Blue-chip NFT contracts to check
+    const historicNFTContracts = [
+      "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb", // CryptoPunks
+      "0x06012c8cf97bead5deae237070f9587f8e7a266d", // CryptoKitties
+      "0x60e4d786628fea6478f785a6d7e704777c86a7c6", // Mutant Ape Yacht Club
+      "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d", // Bored Ape Yacht Club
+      "0x8a90cab2b38dba80c64b7734e58ee1db38b8992e", // Doodles
+      "0x23581767a106ae21c074b2276d25e5c3e136a68b", // Moonbirds
+      "0x49cf6f5d44e70224e2e23fdcdd2c053f30ada28b", // CloneX
+      "0x7bd29408f11d2bfc23c34f18275bbf23bb716bc7", // Meebits
+      "0x79fcdef22feed20eddacbb2587640e45491b757f", // Otherdeeds for Otherland
+      "0x5af0d9827e0c53e4799bb226655a1de152a425a5", // Milady Maker
+      "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270", // Art Blocks Curated
+      "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a", // Art Blocks Factory
+      "0xa7206d878c5c3871826dfdb42191c49b1d11f466", // Art Blocks Explorations
+    ];
+
+    // Check NFT transactions for historic contracts
+    let hasHistoricNFT = false;
+
+    for (const contractAddress of historicNFTContracts) {
+      try {
+        const url = `https://api.etherscan.io/api?module=account&action=tokennfttx&contractaddress=${contractAddress}&address=${address}&page=1&offset=10&sort=desc&apikey=${etherscanApiKey}`;
+
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.warn(
+            `Failed to fetch NFT data for contract ${contractAddress}`
+          );
+          continue;
+        }
+
+        const data = await response.json();
+
+        if (
+          data.status === "1" &&
+          Array.isArray(data.result) &&
+          data.result.length > 0
+        ) {
+          // Look for incoming transfers (indicating ownership)
+          const incomingTransfers = data.result.filter(
+            (tx: { to: string; from: string }) =>
+              tx.to?.toLowerCase() === address.toLowerCase()
+          );
+
+          const outgoingTransfers = data.result.filter(
+            (tx: { to: string; from: string }) =>
+              tx.from?.toLowerCase() === address.toLowerCase()
+          );
+
+          // Calculate net balance for this contract
+          const netBalance =
+            incomingTransfers.length - outgoingTransfers.length;
+
+          if (netBalance > 0) {
+            console.log(
+              `Address ${address} holds ${netBalance} NFT(s) from historic contract ${contractAddress}`
+            );
+            hasHistoricNFT = true;
+            break; // Found at least one historic NFT, no need to check others
+          }
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch (error) {
+        console.warn(`Error checking contract ${contractAddress}:`, error);
+        // Continue checking other contracts
+      }
+    }
+
+    return hasHistoricNFT;
+  } catch (error) {
+    console.error("Error verifying historic NFT holder status:", error);
+    return false;
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,81 +105,36 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get verification results
-    const mint_eligibility = await verifyHistoricNFT(address as Address);
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifyHistoricNFTHolder
+    );
 
-    // Generate cryptographic signature of the verification results
     const signature = await createSignature({
-      address: address as Address,
+      address: address as Address, // Always use the primary address for signature
       mint_eligibility,
     });
 
     return new Response(JSON.stringify({ mint_eligibility, signature }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      },
     });
   } catch (error) {
-    console.error("Error in handler:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
+    console.error("Error processing GET request:", {
+      error,
+      timestamp: new Date().toISOString(),
     });
-  }
-}
-
-/**
- * Verifies if an address owns NFTs from historically significant collections
- *
- * @param address - Ethereum address to check
- * @returns Boolean indicating if address owns any historic NFTs
- * @throws Error if verification fails
- */
-async function verifyHistoricNFT(address: Address): Promise<boolean> {
-  try {
-    // Historically significant NFT collections with verified ERC721 contracts
-    const HISTORIC_COLLECTIONS = [
-      "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D", // Bored Ape Yacht Club
-      "0x60E4d786628Fea6478F785A6d7e704777c86a7c6", // Mutant Ape Yacht Club
-      "0x06012c8cf97BEaD5deAe237070F9587f8E7A266d", // CryptoKitties
-      "0x9C8fF314C9Bc7F6e59A9d9225Fb22946427eDC03", // Nouns
-      "0xED5AF388653567Af2F388E6224dC7C4b3241C544", // Azuki
-      "0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e", // Doodles
-      "0x49cF6f5d44E70224e2E23fDcdd2C053F30aDA28B", // CloneX
-      "0x1A92f7381B9F03921564a437210bB9396471050C", // Cool Cats
-      "0xe785E82358879F061BC3dcAC6f0444462D4b5330", // World of Women
-      "0x23581767a106ae21c074b2276D25e5C3e136a68b", // Moonbirds
-      "0xa3AEe8BcE55BEeA1951EF834b99f3Ac60d1ABeeB", // VeeFriends
-      "0xa7d8d9ef8D8Ce8992Df33D8b8CF4Aebabd5bD270", // Art Blocks Curated
-      "0x059EDD72Cd353dF5106D2B9cC5ab83a52287aC3a", // Chromie Squiggle
-      "0x34d85c9CDeB23FA97cb08333b511ac86E1C4E258", // BAYC Otherdeeds
-      "0xFF9C1b15B16263C61d017ee9F65C50e4AE0113D7", // Loot (for Adventurers)
-      "0xBd3531dA5CF5857e7CfAA92426877b022e612cf8", // Pudgy Penguins
-      "0xc3f733ca98E0daD0386979Eb96fb1722A1A05E69", // MoonCats (ERC721 wrapper)
-    ];
-
-    // Check each collection for ownership
-    for (const contractAddress of HISTORIC_COLLECTIONS) {
-      try {
-        const balance = (await client.readContract({
-          address: contractAddress as Address,
-          abi: ERC721_ABI,
-          functionName: "balanceOf",
-          args: [address],
-        })) as bigint;
-
-        const nftCount = Number(balance);
-        if (nftCount > 0) {
-          return true; // Found at least one historic NFT
-        }
-      } catch (error) {
-        // Log error but continue checking other collections
-        console.warn(`Error checking contract ${contractAddress}:`, error);
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Internal server error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
       }
-    }
-
-    return false; // No historic NFTs found
-  } catch (error) {
-    console.error("Error verifying historic NFT ownership:", error);
-    throw new Error("Failed to verify historic NFT ownership");
+    );
   }
 }

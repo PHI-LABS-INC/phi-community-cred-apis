@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import PQueue from "p-queue";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 // Create queue for API key
 const API_KEY = process.env.ETHERSCAN_API_KEY;
@@ -61,49 +62,6 @@ async function fetchWithRateLimit(
   return tryFetch(1);
 }
 
-export async function GET(req: NextRequest) {
-  const address = req.nextUrl.searchParams.get("address");
-
-  if (!address || !isAddress(address)) {
-    return NextResponse.json(
-      { error: "Invalid address provided" },
-      { status: 400 }
-    );
-  }
-
-  try {
-    let result;
-    for (let i = 0; i < 3; i++) {
-      try {
-        result = await verifyTransaction(address as Address);
-        break;
-      } catch (error) {
-        if (i === 2) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
-      }
-    }
-
-    const [mint_eligibility, data] = result!;
-
-    const signature = await createSignature({
-      address: address as Address,
-      mint_eligibility,
-      data,
-    });
-
-    return NextResponse.json(
-      { mint_eligibility, data, signature },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error in handler:", error);
-    return NextResponse.json(
-      { error: "Please try again later" },
-      { status: 500 }
-    );
-  }
-}
-
 /**
  * Verifies the first transaction date of an Ethereum address
  *
@@ -148,5 +106,40 @@ async function verifyTransaction(address: Address): Promise<[boolean, string]> {
   } catch (error) {
     console.error("Error fetching transaction data:", error);
     throw error;
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const address = req.nextUrl.searchParams.get("address");
+
+    if (!address || !isAddress(address)) {
+      return NextResponse.json(
+        { error: "Invalid address provided" },
+        { status: 400 }
+      );
+    }
+
+    const { mint_eligibility, data } = await verifyMultipleWallets(
+      req,
+      verifyTransaction
+    );
+
+    const signature = await createSignature({
+      address: address as Address, // Always use the primary address for signature
+      mint_eligibility,
+      data: data || "No transactions found",
+    });
+
+    return NextResponse.json(
+      { mint_eligibility, data: data || "No transactions found", signature },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error in handler:", error);
+    return NextResponse.json(
+      { error: "Please try again later" },
+      { status: 500 }
+    );
   }
 }

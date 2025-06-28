@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 const API_KEY = process.env.KWIK_CLAIM_API_KEY;
 if (!API_KEY) {
@@ -18,14 +19,16 @@ interface KwikClaimOpportunity {
  * @param address - Ethereum address to check
  * @returns Promise<KwikClaimOpportunity[]> Array of opportunities
  */
-async function fetchKwikClaimOpportunities(address: string): Promise<KwikClaimOpportunity[]> {
+async function fetchKwikClaimOpportunities(
+  address: string
+): Promise<KwikClaimOpportunity[]> {
   try {
     const response = await fetch(
       `http://api.kwikclaim.com/v1/public/opportunities?address=${address}`,
       {
         headers: {
-          'x-api-key': API_KEY as string
-        }
+          "x-api-key": API_KEY as string,
+        },
       }
     );
 
@@ -49,10 +52,11 @@ async function fetchKwikClaimOpportunities(address: string): Promise<KwikClaimOp
 async function verifyKwikClaimAirdrops(address: Address): Promise<boolean> {
   try {
     const opportunities = await fetchKwikClaimOpportunities(address);
-    
+
     // Filter for airdrop or reward opportunities with USD value
-    const validOpportunities = opportunities.filter(opp => 
-      (opp.type === "airdrop" || opp.type === "reward") && opp.usdAmount > 0
+    const validOpportunities = opportunities.filter(
+      (opp) =>
+        (opp.type === "airdrop" || opp.type === "reward") && opp.usdAmount > 0
     );
 
     return validOpportunities.length > 0;
@@ -77,18 +81,24 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const mint_eligibility = await verifyKwikClaimAirdrops(address as Address);
+    const result = await verifyMultipleWalletsSimple(
+      req,
+      verifyKwikClaimAirdrops
+    );
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
+      mint_eligibility: result.mint_eligibility,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, signature }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ mint_eligibility: result.mint_eligibility, signature }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error in handler:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {

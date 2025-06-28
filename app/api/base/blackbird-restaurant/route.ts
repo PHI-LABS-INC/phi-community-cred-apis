@@ -1,6 +1,7 @@
 import { createSignature } from "@/app/lib/signature";
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 // Blockchain Configuration
 const BLACKBIRD_CONTRACT_ADDRESS = "0x1dE409fC7613C234655f566A2969dD8a862E38B4"; // Blackbird Restaurant NFT contract
@@ -76,20 +77,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify ownership
-    const [mint_eligibility, data] = await verifyBlackbirdOwnership(
-      address as Address
-    );
+    const result = await verifyMultipleWallets(req, verifyBlackbirdOwnership);
 
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data,
+      mint_eligibility: result.mint_eligibility,
+      data: result.data || "0",
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility,
-        data,
+        mint_eligibility: result.mint_eligibility,
+        data: result.data || "0",
         signature,
       }),
       {
@@ -102,7 +101,7 @@ export async function GET(req: NextRequest) {
     );
   } catch (error) {
     console.error("Error in API handler:", error);
-    
+
     // Return false eligibility instead of error response
     return new Response(
       JSON.stringify({

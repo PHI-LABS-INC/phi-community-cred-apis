@@ -1,192 +1,142 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-import PQueue from "p-queue";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
-// Create queue for API key
-const API_KEY = process.env.ETHERSCAN_API_KEY;
-if (!API_KEY) {
-  throw new Error("No API key configured");
-}
+async function verifyDelegateCaller(address: Address): Promise<boolean> {
+  try {
+    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+    if (!etherscanApiKey) {
+      console.error("ETHERSCAN_API_KEY not found");
+      return false;
+    }
 
-// Create a queue with rate limits
-const queue = new PQueue({ interval: 1000, intervalCap: 5 });
+    console.log(`Checking if ${address} has made delegate calls`);
 
-async function fetchWithRateLimit(
-  url: string,
-  retries = 5
-): Promise<Record<string, unknown>> {
-  const tryFetch = async (attempt: number) => {
-    try {
-      const fetchWithTimeout = async () => {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+    // Get all transactions from this address
+    const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=latest&sort=desc&apikey=${etherscanApiKey}`;
 
-        try {
-          const response = await fetch(
-            url.replace(/apikey=([^&]*)/, `apikey=${API_KEY}`),
-            { signal: controller.signal }
-          );
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error("Failed to fetch from Etherscan:", response.statusText);
+      return false;
+    }
+
+    const data = await response.json();
+
+    if (data.status === "1" && Array.isArray(data.result)) {
+      // Look for delegate call patterns
+      // Delegate calls are often identified by empty 'to' field or specific contract interactions
+      const delegateCallTransactions = data.result.filter(
+        (tx: {
+          to?: string;
+          value: string;
+          isError: string;
+          input: string;
+          functionName?: string;
+          methodId?: string;
+        }) => {
+          // Check for delegate call patterns
+          // 1. Transactions with specific delegate call method IDs
+          if (tx.input && tx.input.startsWith("0x")) {
+            const methodId = tx.input.slice(0, 10); // First 4 bytes (8 hex chars + 0x)
+
+            // Common delegate call method IDs
+            const delegateCallMethodIds = [
+              "0x5c60da1b", // delegatecall()
+              "0xddc3e0d3", // delegateCallWithSignature()
+              "0xa619486e", // masterCopy delegate selector
+              "0x8dd14802", // Gnosis safe delegate calls
+              "0x1626ba7e", // isValidSignature - often used in delegate calls
+              "0x1688f0b9", // execTransaction - often delegates
+              "0x6a761202", // execTransactionFromModule
+              "0x468721a7", // execTransactionFromModuleReturnData
+            ];
+
+            if (delegateCallMethodIds.includes(methodId)) {
+              return tx.isError === "0"; // Only successful transactions
+            }
           }
-          const data = await response.json();
-          clearTimeout(timeout);
-          return data;
-        } catch (error) {
-          clearTimeout(timeout);
-          throw error;
-        }
-      };
 
-      return await queue.add(fetchWithTimeout);
-    } catch (error: unknown) {
-      console.warn(
-        `Attempt ${attempt} failed:`,
-        error instanceof Error ? error.message : String(error)
+          // 2. Look for specific function names that indicate delegate calls
+          if (tx.functionName) {
+            const delegateFunctions = [
+              "delegateCall",
+              "delegatecall",
+              "execTransaction",
+              "execTransactionFromModule",
+              "delegateCallWithSignature",
+            ];
+
+            const hasDelegate = delegateFunctions.some((func) =>
+              tx.functionName!.toLowerCase().includes(func.toLowerCase())
+            );
+
+            if (hasDelegate && tx.isError === "0") {
+              return true;
+            }
+          }
+
+          return false;
+        }
       );
 
-      if (attempt < retries) {
-        const backoff = Math.min(
-          1000 * Math.pow(2, attempt) + Math.random() * 1000,
-          10000
+      if (delegateCallTransactions.length > 0) {
+        console.log(
+          `Found ${delegateCallTransactions.length} delegate call transactions for address ${address}`
         );
-        await new Promise((resolve) => setTimeout(resolve, backoff));
-        return tryFetch(attempt + 1);
+        return true;
       }
-      throw error;
     }
-  };
 
-  return tryFetch(1);
+    console.log(`No delegate calls found for address ${address}`);
+    return false;
+  } catch (error) {
+    console.error("Error verifying delegate caller status:", error);
+    return false;
+  }
 }
 
 export async function GET(req: NextRequest) {
-  const address = req.nextUrl.searchParams.get("address");
-
-  if (!address || !isAddress(address)) {
-    return NextResponse.json(
-      { error: "Invalid address provided" },
-      { status: 400 }
-    );
-  }
-
   try {
-    let result;
-    for (let i = 0; i < 3; i++) {
-      try {
-        result = await verifyDelegateCall(address as Address);
-        break;
-      } catch (error) {
-        if (i === 2) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
-      }
-    }
+    const address = req.nextUrl.searchParams.get("address");
 
-    const [mint_eligibility, delegateCount] = result!;
-
-    const signature = await createSignature({
-      address: address as Address,
-      mint_eligibility,
-      data: delegateCount.toString(),
-    });
-
-    return NextResponse.json(
-      {
-        mint_eligibility,
-        data: delegateCount.toString(),
-        signature,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error in handler:", error);
-    return NextResponse.json(
-      { error: "Please try again later" },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * Verifies if an address has called the delegate method at least once
- * @param address - Ethereum address to check
- * @returns Tuple containing [boolean eligibility status, number delegate call count]
- * @throws Error if verification fails
- */
-async function verifyDelegateCall(
-  address: Address
-): Promise<[boolean, number]> {
-  try {
-    // Use Etherscan v2 API to get transactions
-    const data = await fetchWithRateLimit(
-      `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`
-    );
-
-    if (data.status === "0" && data.message === "NOTOK") {
-      if (data.result === "Missing/Invalid API Key") {
-        throw new Error("Missing or invalid API key");
-      }
-      if (
-        typeof data.result === "string" &&
-        data.result.includes("Max rate limit reached")
-      ) {
-        throw new Error("Rate limit reached");
-      }
-      throw new Error(
-        typeof data.result === "string" ? data.result : "API request failed"
+    if (!address || !isAddress(address)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid address provided" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
       );
     }
 
-    if (
-      !data.result ||
-      !Array.isArray(data.result) ||
-      data.result.length === 0
-    ) {
-      return [false, 0];
-    }
-
-    const transactions = data.result;
-    let delegateCount = 0;
-
-    // Function signatures for common delegate methods
-    const delegateSignatures = [
-      "0x5c19a95c", // delegate(address) - ERC20Votes/ERC721Votes
-      "0xb3f00674", // delegate(address) - OpenZeppelin Votes
-      "0x1cff79cd", // delegate(address) - Compound-like governance
-      "0x2e17de78", // delegate(address) - Uniswap governance
-      "0x6f307dc3", // delegate(address) - Aave governance
-      "0x8c1d8f0b", // delegate(address) - Balancer governance
-      "0x9c395bcb", // delegate(address) - Curve governance
-      "0x1f2a2005", // delegate(address) - Yearn governance
-      "0x485cc955", // delegate(address) - Synthetix governance
-      "0x7d7eabc2", // delegate(address) - Maker governance
-    ];
-
-    // Check each transaction for delegate function calls
-    for (const tx of transactions) {
-      if (!tx.input || tx.input === "0x") continue;
-
-      const input = tx.input.toLowerCase();
-
-      // Check if the transaction input starts with any delegate function signature
-      for (const signature of delegateSignatures) {
-        if (input.startsWith(signature)) {
-          delegateCount++;
-          break; // Count each transaction only once even if it matches multiple signatures
-        }
-      }
-    }
-
-    const isEligible = delegateCount > 0;
-
-    console.log(
-      `Address ${address} has called delegate method ${delegateCount} times, eligible: ${isEligible}`
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifyDelegateCaller
     );
 
-    return [isEligible, delegateCount];
+    // Generate cryptographic signature of the verification result
+    const signature = await createSignature({
+      address: address as Address, // Always use the primary address for signature
+      mint_eligibility,
+    });
+
+    return new Response(
+      JSON.stringify({
+        mint_eligibility,
+        signature,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
-    console.error("Error verifying delegate calls:", error);
-    throw error;
+    console.error("Error in delegate-caller verifier:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 import PQueue from "p-queue";
 
 // Zora Content Coin contract address (this would need to be the actual contract address)
@@ -69,48 +70,53 @@ async function fetchWithRateLimit(
 }
 
 export async function GET(req: NextRequest) {
-  const address = req.nextUrl.searchParams.get("address");
-
-  if (!address || !isAddress(address)) {
-    return NextResponse.json(
-      { error: "Invalid address provided" },
-      { status: 400 }
-    );
-  }
-
   try {
-    let result;
-    for (let i = 0; i < 3; i++) {
-      try {
-        result = await verifyContentCoinPurchase(address as Address);
-        break;
-      } catch (error) {
-        if (i === 2) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
-      }
+    const address = req.nextUrl.searchParams.get("address");
+
+    if (!address || !isAddress(address)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid address provided" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
-    const [mint_eligibility, purchaseCount] = result!;
+    const { mint_eligibility, data } = await verifyMultipleWallets(
+      req,
+      verifyContentCoinPurchase
+    );
 
     const signature = await createSignature({
-      address: address as Address,
+      address: address as Address, // Always use the primary address for signature
       mint_eligibility,
-      data: purchaseCount.toString(),
+      data: data || "0",
     });
 
-    return NextResponse.json(
+    return new Response(
+      JSON.stringify({ mint_eligibility, data: data || "0", signature }),
       {
-        mint_eligibility,
-        data: purchaseCount.toString(),
-        signature,
-      },
-      { status: 200 }
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      }
     );
   } catch (error) {
-    console.error("Error in handler:", error);
-    return NextResponse.json(
-      { error: "Please try again later" },
-      { status: 500 }
+    console.error("Error processing GET request:", {
+      error,
+      timestamp: new Date().toISOString(),
+    });
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Internal server error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
     );
   }
 }
@@ -123,7 +129,7 @@ export async function GET(req: NextRequest) {
  */
 async function verifyContentCoinPurchase(
   address: Address
-): Promise<[boolean, number, Date | null]> {
+): Promise<[boolean, string]> {
   try {
     // Calculate the cutoff date (30 days after launch)
     const cutoffDate = new Date(
@@ -156,12 +162,11 @@ async function verifyContentCoinPurchase(
       !Array.isArray(data.result) ||
       data.result.length === 0
     ) {
-      return [false, 0, null];
+      return [false, "0"];
     }
 
     const transfers = data.result;
     let purchaseCount = 0;
-    let firstPurchaseDate: Date | null = null;
 
     // Check each transfer for purchases within the early adopter window
     for (const transfer of transfers) {
@@ -176,21 +181,16 @@ async function verifyContentCoinPurchase(
         transferDate <= cutoffDate
       ) {
         purchaseCount++;
-
-        // Track the first purchase date
-        if (!firstPurchaseDate || transferDate < firstPurchaseDate) {
-          firstPurchaseDate = transferDate;
-        }
       }
     }
 
     const isEligible = purchaseCount > 0;
 
     console.log(
-      `Address ${address} has purchased Content Coins ${purchaseCount} times within early adopter window, first purchase: ${firstPurchaseDate?.toISOString()}, eligible: ${isEligible}`
+      `Address ${address} has purchased Content Coins ${purchaseCount} times within early adopter window, eligible: ${isEligible}`
     );
 
-    return [isEligible, purchaseCount, firstPurchaseDate];
+    return [isEligible, purchaseCount.toString()];
   } catch (error) {
     console.error("Error verifying Content Coin purchase:", error);
     throw error;

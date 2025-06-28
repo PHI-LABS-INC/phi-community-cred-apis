@@ -3,13 +3,7 @@ import { ApiHealthStatus } from "./ApiHealthStatus";
 import ParametersTable from "./ParametersTable";
 import RequestExample from "./RequestExample";
 import ResponseExample from "./ResponseExample";
-
-interface Parameter {
-  name: string;
-  type: string;
-  required: boolean;
-  description: string;
-}
+import { Parameter } from "@/app/types";
 
 interface EndpointSectionProps {
   method: string;

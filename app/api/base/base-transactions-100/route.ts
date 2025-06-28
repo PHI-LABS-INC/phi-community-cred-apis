@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { Address, isAddress, createPublicClient, http } from "viem";
 import { base } from "viem/chains";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 const client = createPublicClient({
   chain: base,
@@ -40,16 +41,22 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await verifyTransactionCount(address as Address);
+    const result = await verifyMultipleWalletsSimple(
+      req,
+      verifyTransactionCount
+    );
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
+      mint_eligibility: result.mint_eligibility,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, signature }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ mint_eligibility: result.mint_eligibility, signature }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error processing GET request:", {
       error,
