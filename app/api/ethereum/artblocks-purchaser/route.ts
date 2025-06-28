@@ -1,48 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-
-export async function GET(req: NextRequest) {
-  try {
-    const address = req.nextUrl.searchParams.get("address");
-
-    if (!address || !isAddress(address)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid address provided" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // Check if the address has purchased art on ArtBlocks
-    const mint_eligibility = await verifyArtBlocksPurchaser(address as Address);
-
-    // Generate cryptographic signature of the verification result
-    const signature = await createSignature({
-      address: address as Address,
-      mint_eligibility,
-    });
-
-    return new Response(
-      JSON.stringify({
-        mint_eligibility,
-        signature,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-  } catch (error) {
-    console.error("Error in artblocks-purchaser verifier:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-}
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 /**
  * Verifies if the address has purchased art on ArtBlocks
@@ -93,5 +52,49 @@ async function verifyArtBlocksPurchaser(address: Address): Promise<boolean> {
   } catch (error) {
     console.error("Error verifying ArtBlocks purchaser status:", error);
     return false;
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const address = req.nextUrl.searchParams.get("address");
+
+    if (!address || !isAddress(address)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid address provided" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifyArtBlocksPurchaser
+    );
+
+    // Generate cryptographic signature of the verification result
+    const signature = await createSignature({
+      address: address as Address, // Always use the primary address for signature
+      mint_eligibility,
+    });
+
+    return new Response(
+      JSON.stringify({
+        mint_eligibility,
+        signature,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  } catch (error) {
+    console.error("Error in artblocks-purchaser verifier:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

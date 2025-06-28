@@ -2,40 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Address, isAddress } from "viem";
 import { parseISO, isWithinInterval } from "date-fns";
 import { createSignature } from "@/app/lib/signature";
-
-export async function GET(req: NextRequest) {
-  const address = req.nextUrl.searchParams.get("address");
-
-  if (!address || !isAddress(address)) {
-    return NextResponse.json(
-      { error: "Invalid address provided" },
-      { status: 400 }
-    );
-  }
-
-  try {
-    // Get transaction verification results
-    const [mint_eligibility, data] = await verifyTransaction(address as Address);
-
-    // Generate cryptographic signature of the verification results
-    const signature = await createSignature({
-      address: address as Address,
-      mint_eligibility,
-      data,
-    });
-
-    return NextResponse.json(
-      { mint_eligibility, data, signature },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error in handler:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 /**
  * Verifies if an address has transactions in January 2025
@@ -44,7 +11,7 @@ export async function GET(req: NextRequest) {
  * @returns Tuple containing [boolean eligibility status, string transaction count]
  * @throws Error if transaction verification fails
  */
- async function verifyTransaction(address: Address): Promise<[boolean, string]> {
+async function verifyTransaction(address: Address): Promise<[boolean, string]> {
   try {
     // Fetch transaction history from Cyber API
     const response = await fetch(
@@ -79,5 +46,41 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error fetching transaction data:", error);
     throw new Error("Failed to verify address transactions");
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const address = req.nextUrl.searchParams.get("address");
+
+    if (!address || !isAddress(address)) {
+      return NextResponse.json(
+        { error: "Invalid address provided" },
+        { status: 400 }
+      );
+    }
+
+    const { mint_eligibility, data } = await verifyMultipleWallets(
+      req,
+      verifyTransaction
+    );
+
+    // Generate cryptographic signature of the verification results
+    const signature = await createSignature({
+      address: address as Address, // Always use the primary address for signature
+      mint_eligibility,
+      data: data || "0",
+    });
+
+    return NextResponse.json(
+      { mint_eligibility, data: data || "0", signature },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error in handler:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

@@ -1,6 +1,7 @@
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { NextRequest } from "next/server";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 interface Transaction {
   to: string;
@@ -70,10 +71,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await verifyDoodlePurchase(address as Address);
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifyDoodlePurchase
+    );
 
     const signature = await createSignature({
-      address: address as Address,
+      address: address as Address, // Always use the primary address for signature
       mint_eligibility,
     });
 

@@ -1,43 +1,75 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
-const EFP_API_URL = "https://data.ethfollow.xyz/api/v1";
+interface EFPListRecord {
+  address: string;
+  tag: string;
+}
 
-interface StatsResponse {
-  followers_count: number;
-  following_count: number;
+interface EFPUser {
+  address: string;
+  followers: number;
+  following: number;
+  verified: boolean;
+  lists: EFPListRecord[];
+}
+
+async function fetchEFPData(address: Address): Promise<EFPUser | null> {
+  try {
+    const response = await fetch(
+      `https://api.ethfollow.xyz/api/v1/users/${address.toLowerCase()}`
+    );
+
+    if (response.status === 404) {
+      // User not found in EFP
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`EFP API error: ${response.status}`);
+    }
+
+    const data: EFPUser = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching EFP data:", error);
+    throw new Error(
+      `Failed to fetch EFP data: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
 }
 
 async function verifyEFPInfluencer(address: Address): Promise<boolean> {
   try {
-    console.log("Checking EFP followers for address:", address);
+    console.log("Checking EFP influencer status for address:", address);
 
-    const url = `${EFP_API_URL}/users/${address.toLowerCase()}/stats`;
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-      },
-    });
+    const efpData = await fetchEFPData(address);
 
-    if (!response.ok) {
-      console.error(`Failed to fetch stats: ${response.status}`);
+    if (!efpData) {
+      console.log(`Address ${address} not found in EFP`);
       return false;
     }
 
-    const stats = (await response.json()) as StatsResponse;
-    const followerCount = stats.followers_count;
+    // Define influencer criteria
+    const minFollowers = 50; // Minimum followers to be considered an influencer
+    const hasFollowers = efpData.followers >= minFollowers;
 
-    console.log(`Found ${followerCount} followers for address ${address}`);
+    console.log(
+      `Address ${address} has ${efpData.followers} followers on EFP (threshold: ${minFollowers})`
+    );
 
-    return followerCount >= 100;
+    return hasFollowers;
   } catch (error) {
-    console.error("Error verifying EFP Influencer status:", {
-      error,
-      address,
-      timestamp: new Date().toISOString(),
-    });
-    return false;
+    console.error("Error verifying EFP influencer:", error);
+    throw new Error(
+      `Failed to verify EFP influencer status: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 }
 
@@ -55,9 +87,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await verifyEFPInfluencer(address as Address);
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifyEFPInfluencer
+    );
+
     const signature = await createSignature({
-      address: address as Address,
+      address: address as Address, // Always use the primary address for signature
       mint_eligibility,
     });
 

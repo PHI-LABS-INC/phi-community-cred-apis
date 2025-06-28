@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 // Major Superchain networks (OP Stack chains) from the supported chain list - Using 4 mainnet networks only
 const SUPERCHAIN_NETWORKS = {
@@ -99,40 +100,35 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await verifyL2Voyager(address as Address);
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifyL2Voyager
+    );
+
     const signature = await createSignature({
-      address: address as Address,
+      address: address as Address, // Always use the primary address for signature
       mint_eligibility,
     });
 
-    return new Response(
-      JSON.stringify({
-        mint_eligibility,
-        signature,
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      }
-    );
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      },
+    });
   } catch (error) {
-    console.error("Error in handler:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
+    console.error("Error processing GET request:", {
+      error,
+      timestamp: new Date().toISOString(),
+    });
     return new Response(
       JSON.stringify({
-        error: "Internal server error",
-        details: errorMessage,
+        error: error instanceof Error ? error.message : "Internal server error",
       }),
       {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
+        headers: { "Content-Type": "application/json" },
       }
     );
   }

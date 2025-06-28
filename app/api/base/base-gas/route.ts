@@ -2,6 +2,7 @@ import { Address } from "viem";
 import { isAddress } from "viem";
 import { NextRequest } from "next/server";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
@@ -14,14 +15,14 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const gasSpent = await verifyBaseGasSpent(address as Address);
+    const result = await verifyMultipleWalletsSimple(req, verifyBaseGasSpent);
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: gasSpent,
+      mint_eligibility: result.mint_eligibility,
     });
 
     return new Response(
-      JSON.stringify({ mint_eligibility: gasSpent, signature }),
+      JSON.stringify({ mint_eligibility: result.mint_eligibility, signature }),
       {
         status: 200,
         headers: {

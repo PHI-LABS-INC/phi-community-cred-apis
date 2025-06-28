@@ -3,6 +3,7 @@ import { Address, isAddress, formatUnits } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 const client = createPublicClient({
   chain: base,
@@ -35,19 +36,21 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const [mint_eligibility, data] = await verifySuperUSDCHoldings(
-      address as Address
-    );
+    const result = await verifyMultipleWallets(req, verifySuperUSDCHoldings);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data,
+      mint_eligibility: result.mint_eligibility,
+      data: result.data || "0",
     });
 
     return new Response(
-      JSON.stringify({ mint_eligibility, data: data.toString(), signature }),
+      JSON.stringify({
+        mint_eligibility: result.mint_eligibility,
+        data: result.data || "0",
+        signature,
+      }),
       {
         status: 200,
         headers: {

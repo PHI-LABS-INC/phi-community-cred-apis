@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import axios, { AxiosError } from "axios";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 // EAS GraphQL endpoint for Base
 const EAS_GRAPHQL_ENDPOINT = "https://base.easscan.org/graphql";
@@ -26,21 +27,22 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const [mint_eligibility, data] = await verifyBountyCasterAttestation(
-      address as Address
+    const result = await verifyMultipleWallets(
+      req,
+      verifyBountyCasterAttestation
     );
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data,
+      mint_eligibility: result.mint_eligibility,
+      data: result.data,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility,
-        data,
+        mint_eligibility: result.mint_eligibility,
+        data: result.data,
         signature,
       }),
       {

@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 const client = createPublicClient({
   chain: base,
@@ -72,22 +73,20 @@ export async function GET(req: NextRequest) {
     }
 
     // Get profile data
-    const [mint_eligibility, profileId] = await getEthosProfileData(
-      address as Address
-    );
+    const result = await verifyMultipleWallets(req, getEthosProfileData);
 
     // Generate signature
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data: profileId,
+      mint_eligibility: result.mint_eligibility,
+      data: result.data,
     });
 
     // Return structured response
     return new Response(
       JSON.stringify({
-        mint_eligibility,
-        data: profileId,
+        mint_eligibility: result.mint_eligibility,
+        data: result.data,
         signature,
       }),
       {

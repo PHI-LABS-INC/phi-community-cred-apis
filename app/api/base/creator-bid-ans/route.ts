@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,17 +18,17 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results by checking if the wallet interacted with the specified contract via BaseScan API
-    const [mint_eligibility] = await verifyANS(address as Address);
+    const result = await verifyMultipleWalletsSimple(req, verifyANS);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: mint_eligibility as boolean,
+      mint_eligibility: result.mint_eligibility,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility: mint_eligibility as boolean,
+        mint_eligibility: result.mint_eligibility,
         signature,
       }),
       {
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
  * @returns Tuple containing [boolean eligibility status]
  * @throws Error if verification fails
  */
-async function verifyANS(address: Address): Promise<[boolean]> {
+async function verifyANS(address: Address): Promise<boolean> {
   try {
     const CONTRACT_ADDRESS = "0x9e711dD562DD7C84127780949Ac3FD5a83136676";
 
@@ -84,7 +85,7 @@ async function verifyANS(address: Address): Promise<[boolean]> {
         tx.to && tx.to.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()
     );
 
-    return [hasInteracted];
+    return hasInteracted;
   } catch (error) {
     console.error("Error verifying contract interaction via BaseScan:", error);
     throw new Error("Failed to verify contract interaction");

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { Address, isAddress, createPublicClient, http } from "viem";
 import { base } from "viem/chains";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 // Test address for verification: 0xe24449034d0B0C9c083F9a2c194ccB273b493467
 export async function GET(req: NextRequest) {
@@ -32,22 +33,23 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if address meets game requirements
-    const [mint_eligibility, data] = await verifyCatTownGame(
-      address as Address
-    );
+    const result = await verifyMultipleWallets(req, verifyCatTownGame);
 
     // Generate signature for verified address
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data: data.length > 32 ? data.slice(0, 32) : data.padEnd(32, "0"),
+      mint_eligibility: result.mint_eligibility,
+      data:
+        (result.data || "").length > 32
+          ? (result.data || "").slice(0, 32)
+          : (result.data || "").padEnd(32, "0"),
     });
 
     // Return successful response with verification results
     return new Response(
       JSON.stringify({
-        mint_eligibility,
-        data,
+        mint_eligibility: result.mint_eligibility,
+        data: result.data || "",
         signature,
       }),
       {

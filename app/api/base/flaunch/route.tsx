@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { Address, isAddress, createPublicClient, http } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { base } from "viem/chains";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 const FLAUNCH_CONTRACT = "0x6A53F8b799bE11a2A3264eF0bfF183dCB12d9571";
 
@@ -53,17 +54,20 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const mint_eligibility = await verifyFlaunchActivity(address as Address);
+    const result = await verifyMultipleWalletsSimple(
+      req,
+      verifyFlaunchActivity
+    );
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
+      mint_eligibility: result.mint_eligibility,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility,
+        mint_eligibility: result.mint_eligibility,
         signature,
       }),
       {

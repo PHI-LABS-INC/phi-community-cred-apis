@@ -5,6 +5,7 @@ import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
 import { AccrualPosition } from "@morpho-org/blue-sdk-viem/lib/augment/Position";
 import { MarketId } from "@morpho-org/blue-sdk";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 const client = createPublicClient({
   chain: base,
@@ -25,20 +26,18 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [loan_eligibility, loan_data] = await verifyMorphoLoanBase(
-      address as Address
-    );
+    const result = await verifyMultipleWallets(req, verifyMorphoLoanBase);
 
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: loan_eligibility,
-      data: loan_data,
+      mint_eligibility: result.mint_eligibility,
+      data: result.data,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility: loan_eligibility,
-        data: loan_data,
+        mint_eligibility: result.mint_eligibility,
+        data: result.data,
         signature,
       }),
       {

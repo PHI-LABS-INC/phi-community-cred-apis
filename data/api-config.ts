@@ -5,6 +5,7 @@ export const endpoints = [
     id: "verifytx",
     description:
       "Verifies if an Ethereum address has transactions in January 2025 on cyber mainnet and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -12,6 +13,7 @@ export const endpoints = [
     id: "verifyfreysanft",
     description:
       "Verifies if an Ethereum address owns an NFT from the Freysa Reflections 2049 collection on base and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -19,6 +21,7 @@ export const endpoints = [
     id: "verifyclanker",
     description:
       "Verifies if an Ethereum address has launched or purchased a Clanker coin and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -26,6 +29,7 @@ export const endpoints = [
     id: "verifyans",
     description:
       "Verifies if an Ethereum address owns an ANS (Arweave Name Service) domain from creator.bid and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -33,6 +37,7 @@ export const endpoints = [
     id: "verifymorpholoan",
     description:
       "Verifies if an Ethereum address has an active USDC loan on Morpho (Base) and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -40,6 +45,7 @@ export const endpoints = [
     id: "verifybasetx",
     description:
       "Verifies if an Ethereum address has transactions in January 2025 on Base and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -47,6 +53,7 @@ export const endpoints = [
     id: "verifycat",
     description:
       "Verifies if an Ethereum address holds at least 1000 Kibble tokens and owns at least one Cat Town NFT (Founder Profile Picture Collection) and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -54,6 +61,7 @@ export const endpoints = [
     id: "verifyrodeo",
     description:
       "Verifies if an Ethereum address has content in the Rodeo and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -61,6 +69,7 @@ export const endpoints = [
     id: "verifybtcloan",
     description:
       "Verifies if an Ethereum address has an active BTC loan on Coinbase and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -68,6 +77,7 @@ export const endpoints = [
     id: "verifyopensea",
     description:
       "Verifies if an Ethereum address has NFTs on OpenSea and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -75,6 +85,7 @@ export const endpoints = [
     id: "verifyblackbird",
     description:
       "Verifies if an Ethereum address has an NFT from the Blackbird Restaurant collection on Base and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -82,6 +93,7 @@ export const endpoints = [
     id: "verifygigabrain",
     description:
       "Verifies if an Ethereum address holds either a GigaBrain Pass NFT or at least 1M GigaBrain tokens and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -89,6 +101,7 @@ export const endpoints = [
     id: "verifyethos",
     description:
       "Verifies if an Ethereum address has an Ethos Network profile and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -96,6 +109,7 @@ export const endpoints = [
     id: "verifysuperusdc",
     description:
       "Verifies if an Ethereum address holds at least 100,000 USDC on Base and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -103,6 +117,7 @@ export const endpoints = [
     id: "verifytimeswap",
     description:
       "Verifies if an Ethereum address holds any Timeswap Pool Position NFTs and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -110,6 +125,7 @@ export const endpoints = [
     id: "verifybento",
     description:
       "Verifies if an Ethereum address holds any Bento tokens and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -117,6 +133,7 @@ export const endpoints = [
     id: "verifyflaunch",
     description:
       "Verifies if an Ethereum address has interacted with the Flaunch contract and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -124,6 +141,7 @@ export const endpoints = [
     id: "verifyinfectedfun",
     description:
       "Verifies if an Ethereum address is registered on Infected.fun and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -131,6 +149,7 @@ export const endpoints = [
     id: "verifysparkfi",
     description:
       "Verifies if an Ethereum address has borrowed at least $10 worth of USDS on Spark.fi and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -138,6 +157,7 @@ export const endpoints = [
     id: "verifybasetx100",
     description:
       "Verifies if an Ethereum address has at least 100 transactions on Base and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -145,6 +165,7 @@ export const endpoints = [
     id: "verifynouncedao",
     description:
       "Verifies if an Ethereum address has voted in the Nounce DAO and returns eligibility status on ethereum mainnet",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -152,6 +173,7 @@ export const endpoints = [
     id: "verifydoodle",
     description:
       "Verifies if an Ethereum address has purchased a Doodle in 2021 and returns eligibility status on ethereum mainnet",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -159,6 +181,7 @@ export const endpoints = [
     id: "verifyb3staker",
     description:
       "Verifies if an Ethereum address holds at least 1000 B3 tokens and returns eligibility status on base",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -166,6 +189,7 @@ export const endpoints = [
     id: "verifybasementplayer",
     description:
       "Verifies if an Ethereum address has played at least one game on Basement.fun and returns eligibility status on base",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -173,6 +197,7 @@ export const endpoints = [
     id: "verifybasegasuser",
     description:
       "Verifies if an Ethereum address has spent at least 0.1 ETH on Base and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -180,6 +205,7 @@ export const endpoints = [
     id: "verifyvalentinetransact",
     description:
       "Verifies if an Ethereum address has transacted on Base on Valentine's Day and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -187,6 +213,7 @@ export const endpoints = [
     id: "verifybasegas",
     description:
       "Verifies if an Ethereum address has spent at least 0.1 ETH on Base and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -194,6 +221,7 @@ export const endpoints = [
     id: "verifyaavegotchi",
     description:
       "Verifies if an Ethereum address holds GHST tokens and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -201,6 +229,7 @@ export const endpoints = [
     id: "verifykaitoai",
     description:
       "Verifies if an Ethereum address holds Kaito tokens and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -208,6 +237,7 @@ export const endpoints = [
     id: "verifybaseog",
     description:
       "Verifies if an Ethereum address has made a transaction on Base when it launched and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -215,6 +245,7 @@ export const endpoints = [
     id: "verifyfirsttransaction",
     description:
       "Verifies the first transaction date of an Ethereum address and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -222,6 +253,7 @@ export const endpoints = [
     id: "verifyfarcon2025",
     description:
       "Verifies if an Ethereum address holds a Farcon Summit 2025 NFT ticket and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -229,6 +261,7 @@ export const endpoints = [
     id: "verifykwikclaim",
     description:
       "Verifies if an Ethereum address has any airdrop or reward opportunities on KwikClaim and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -236,6 +269,7 @@ export const endpoints = [
     id: "verifyfarconhackathon",
     description:
       "Verifies if an Ethereum address holds a Farcon Builders NFT and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -243,6 +277,7 @@ export const endpoints = [
     id: "verifyensholder",
     description:
       "Verifies if an Ethereum address has an ENS name and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -250,6 +285,7 @@ export const endpoints = [
     id: "verifypizzaday",
     description:
       "Verifies if an Ethereum address has made a transaction on Base on Bitcoin Pizza Day and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -257,6 +293,7 @@ export const endpoints = [
     id: "verifyusdc",
     description:
       "Verifies if an Ethereum address has any valid attestations from BountyCaster and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -264,6 +301,7 @@ export const endpoints = [
     id: "verifybaseonchainscore",
     description:
       "Verifies if an Ethereum address has a Base onchain score greater than 50 and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -271,6 +309,7 @@ export const endpoints = [
     id: "verifyethvalidator",
     description:
       "Verifies if an Ethereum address is a validator and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -278,6 +317,7 @@ export const endpoints = [
     id: "verifygitcoincontributor",
     description:
       "Verifies if an Ethereum address has contributed to Gitcoin Grants and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -285,6 +325,7 @@ export const endpoints = [
     id: "verifyethwhale",
     description:
       "Verifies if an Ethereum address holds at least 10 ETH and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -292,6 +333,7 @@ export const endpoints = [
     id: "verifyethereumog2016",
     description:
       "Verifies if an Ethereum address has made a transaction on Ethereum in 2016 and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -299,6 +341,7 @@ export const endpoints = [
     id: "verifyethereumog2018",
     description:
       "Verifies if an Ethereum address has made a transaction on Ethereum in 2018 and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -306,6 +349,7 @@ export const endpoints = [
     id: "verifyefpinfluencer",
     description:
       "Verifies if an Ethereum address has 100+ followers on EFP (Ethereum Follow Protocol) and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -313,6 +357,7 @@ export const endpoints = [
     id: "verifyethereumnetworkguardian",
     description:
       "Verifies if an Ethereum address has staked any amount of ETH on Lido by checking stETH balance and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -320,6 +365,7 @@ export const endpoints = [
     id: "verifydaocitizen",
     description:
       "Verifies if an Ethereum address has voted at least 1 time on Snapshot governance platform and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -327,6 +373,7 @@ export const endpoints = [
     id: "verifyonchainwriter",
     description:
       "Verifies if an Ethereum address has published content on Paragraph by checking NFT ownership and contract interactions and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -334,6 +381,7 @@ export const endpoints = [
     id: "verifysuperchainvoyager",
     description:
       "Verifies if an Ethereum address has made transactions on 3 or more Superchain networks (OP Stack chains) and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -341,6 +389,7 @@ export const endpoints = [
     id: "verifyfarcasterinfluencer",
     description:
       "Verifies if an Ethereum address has more than 500 followers on Farcaster and returns eligibility status",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -348,6 +397,7 @@ export const endpoints = [
     id: "verifypoapcollector",
     description:
       "Verifies if an Ethereum address has collected more than 50 POAPs and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -355,6 +405,7 @@ export const endpoints = [
     id: "verifytokenapprovalrevoker",
     description:
       "Verifies if an Ethereum address has revoked token approvals at least once and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -362,6 +413,7 @@ export const endpoints = [
     id: "verifydelegatecaller",
     description:
       "Verifies if an Ethereum address has called the delegate method at least once and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -369,6 +421,7 @@ export const endpoints = [
     id: "verifyzoracontentcoinbuyer",
     description:
       "Verifies if an Ethereum address has purchased Content Coins within 30 days after Zora's Content Coin feature launch and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -376,6 +429,7 @@ export const endpoints = [
     id: "verifyhistoricnftholder",
     description:
       "Verifies if an Ethereum address has held any of the following NFTs in the past and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -383,6 +437,7 @@ export const endpoints = [
     id: "verifyonchain100x",
     description:
       "Verifies if an Ethereum address has made 100+ transactions on Base and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -390,6 +445,7 @@ export const endpoints = [
     id: "verifybridgedbased",
     description:
       "Verifies if an Ethereum address has bridged at least 1 ETH (cumulative) into Base and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -397,6 +453,7 @@ export const endpoints = [
     id: "verifybasenftholder",
     description:
       "Verifies if an Ethereum address has collected 10+ NFTs on Base and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -404,6 +461,7 @@ export const endpoints = [
     id: "verifygasburner",
     description:
       "Verifies if an Ethereum address has spent 0.05 ETH+ in gas fees on Base and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -411,6 +469,7 @@ export const endpoints = [
     id: "verifybasegenesis",
     description:
       "Verifies if an Ethereum address minted during the first 30 days of Base Mainnet and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -418,6 +477,7 @@ export const endpoints = [
     id: "verifybasedefitrader",
     description:
       "Verifies if an Ethereum address has made at least 30 trades on Base DEXs (Aerodrome, Uniswap, BaseSwap, etc.) and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -425,6 +485,7 @@ export const endpoints = [
     id: "verifynounsgovernanceparticipant",
     description:
       "Verifies if an Ethereum address has participated in Nouns DAO governance and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -432,6 +493,7 @@ export const endpoints = [
     id: "verifynounsholder",
     description:
       "Verifies if an Ethereum address has held a Nouns NFT and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -439,6 +501,7 @@ export const endpoints = [
     id: "verifynounsauctionbidder",
     description:
       "Verifies if an Ethereum address has placed a bid in a Nouns auction and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -446,6 +509,7 @@ export const endpoints = [
     id: "verifynounce",
     description:
       "Verifies if an Ethereum address has held a Support NFT and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -453,6 +517,7 @@ export const endpoints = [
     id: "verifyartblockspurchaser",
     description:
       "Verifies if an Ethereum address has purchased an ArtBlocks NFT and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -460,6 +525,7 @@ export const endpoints = [
     id: "verifycastsclub",
     description:
       "Verifies if an Ethereum address has made 100+ casts on Farcaster and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -467,6 +533,7 @@ export const endpoints = [
     id: "verifyrecastroyalty",
     description:
       "Verifies if an Ethereum address has received 50+ total recasts across all posts on Farcaster and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -474,6 +541,7 @@ export const endpoints = [
     id: "verifydegenbeliever",
     description:
       "Verifies if an Ethereum address has tipped or received 1,000+ $DEGEN tokens on Farcaster and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -481,6 +549,7 @@ export const endpoints = [
     id: "verifyappcrafter",
     description:
       "Verifies if an Ethereum address has published mini apps used by 50+ unique users on Farcaster and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
   {
     method: "GET",
@@ -488,6 +557,7 @@ export const endpoints = [
     id: "verifyroundsreward",
     description:
       "Verifies if an Ethereum address has won Farcaster Rounds rewards 3+ times and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
   },
 ];
 
@@ -496,6 +566,13 @@ export const parameters = [
     name: "address",
     type: "string",
     required: true,
-    description: "Ethereum address to verify",
+    description: "Primary Ethereum address to verify",
+  },
+  {
+    name: "addresses",
+    type: "string",
+    required: false,
+    description:
+      "Comma-separated list of additional Ethereum addresses to verify (optional, for multi-wallet verification)",
   },
 ];

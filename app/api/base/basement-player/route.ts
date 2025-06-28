@@ -1,6 +1,7 @@
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { NextRequest } from "next/server";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 interface Activity {
   user?: {
@@ -57,16 +58,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await verifyGamePlayed(address as Address);
+    const result = await verifyMultipleWalletsSimple(req, verifyGamePlayed);
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
+      mint_eligibility: result.mint_eligibility,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, signature }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ mint_eligibility: result.mint_eligibility, signature }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error processing GET request:", {
       error,

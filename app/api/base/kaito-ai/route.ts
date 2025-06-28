@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,16 +18,16 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const hasKaitoToken = await verifyKaitoToken(address as Address);
+    const result = await verifyMultipleWalletsSimple(req, verifyKaitoToken);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: hasKaitoToken,
+      mint_eligibility: result.mint_eligibility,
     });
 
     return new Response(
-      JSON.stringify({ mint_eligibility: hasKaitoToken, signature }),
+      JSON.stringify({ mint_eligibility: result.mint_eligibility, signature }),
       {
         status: 200,
         headers: { "Content-Type": "application/json" },

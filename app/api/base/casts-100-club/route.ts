@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 // Neynar API configuration
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
@@ -133,15 +134,15 @@ async function getUserCastCount(fid: number): Promise<number> {
 
 async function verify100CastsClub(
   address: Address
-): Promise<{ eligible: boolean; castCount: number }> {
+): Promise<[boolean, string]> {
   try {
     const fid = await getFidFromAddress(address);
     if (!fid) {
-      return { eligible: false, castCount: 0 };
+      return [false, "0"];
     }
 
     const castCount = await getUserCastCount(fid);
-    return { eligible: castCount >= 100, castCount };
+    return [castCount >= 100, castCount.toString()];
   } catch (error) {
     console.error("Error verifying 100 casts club:", {
       error,
@@ -158,7 +159,6 @@ async function verify100CastsClub(
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
-  const addresses = req.nextUrl.searchParams.get("addresses");
 
   if (!address || !isAddress(address)) {
     return NextResponse.json(
@@ -175,39 +175,20 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const addressesToCheck: Address[] = [address as Address];
-    if (addresses) {
-      const additionalAddresses = addresses
-        .split(",")
-        .map((addr) => addr.trim())
-        .filter((addr) => isAddress(addr)) as Address[];
-      addressesToCheck.push(...additionalAddresses);
-    }
-
-    let mint_eligibility = false;
-    let data = "0";
-
-    for (const addr of addressesToCheck) {
-      try {
-        const result = await verify100CastsClub(addr);
-        if (result.eligible) {
-          mint_eligibility = true;
-          data = result.castCount.toString();
-          break;
-        }
-      } catch (error) {
-        console.warn(`Error checking address ${addr}:`, error);
-      }
-    }
+    const result = await verifyMultipleWallets(req, verify100CastsClub);
 
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data,
+      mint_eligibility: result.mint_eligibility,
+      data: result.data,
     });
 
     return NextResponse.json(
-      { mint_eligibility, data, signature },
+      {
+        mint_eligibility: result.mint_eligibility,
+        data: result.data,
+        signature,
+      },
       { status: 200 }
     );
   } catch (error) {

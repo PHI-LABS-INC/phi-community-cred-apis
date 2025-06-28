@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { Address, isAddress, createPublicClient, http } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { base } from "viem/chains";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 const USDS = "0x820C137fa70C8691f0e44Dc420a5e53c168921Dc";
 
@@ -63,17 +64,17 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const mint_eligibility = await verifyUSDSBalance(address as Address);
+    const result = await verifyMultipleWalletsSimple(req, verifyUSDSBalance);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
+      mint_eligibility: result.mint_eligibility,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility,
+        mint_eligibility: result.mint_eligibility,
         signature,
       }),
       {

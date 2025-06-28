@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_01;
 
@@ -59,21 +60,19 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const [mint_eligibility, data] = await verifyOnchainScore(
-      address as Address
-    );
+    const result = await verifyMultipleWallets(req, verifyOnchainScore);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data: data.toString(),
+      mint_eligibility: result.mint_eligibility,
+      data: result.data || "0",
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility,
-        data,
+        mint_eligibility: result.mint_eligibility,
+        data: parseInt(result.data || "0"),
         signature,
       }),
       {
@@ -128,11 +127,11 @@ export async function GET(req: NextRequest) {
  */
 async function verifyOnchainScore(
   address: Address
-): Promise<[boolean, number]> {
+): Promise<[boolean, string]> {
   try {
     if (!BASESCAN_API_KEY) {
       console.error("Missing required BaseScan API key");
-      return [false, 0];
+      return [false, "0"];
     }
 
     // Fetch transaction history from BaseScan API
@@ -142,12 +141,12 @@ async function verifyOnchainScore(
 
     if (data.status !== "1" || !Array.isArray(data.result)) {
       console.error("Error fetching transaction data from BaseScan:", data);
-      return [false, 0];
+      return [false, "0"];
     }
 
     const transactions = data.result;
     if (transactions.length === 0) {
-      return [false, 0];
+      return [false, "0"];
     }
 
     // Calculate detailed metrics
@@ -168,10 +167,10 @@ async function verifyOnchainScore(
     // Address is eligible if total score is between 50 and 100
     const isEligible = totalScore > 50 && totalScore <= 100;
 
-    return [isEligible, totalScore];
+    return [isEligible, totalScore.toString()];
   } catch (error) {
     console.error("Error verifying onchain reputation score:", error);
-    return [false, 0];
+    return [false, "0"];
   }
 }
 

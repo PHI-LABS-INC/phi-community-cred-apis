@@ -1,16 +1,17 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 async function verifyTokenApprovalRevocation(
   address: Address
-): Promise<[boolean, number]> {
+): Promise<[boolean, string]> {
   try {
     const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_02;
 
     if (!BASESCAN_API_KEY) {
       console.error("Missing BaseScan API key");
-      return [false, 0];
+      return [false, "0"];
     }
 
     // Use BaseScan API to get transactions for Base network (chainid=8453)
@@ -21,7 +22,7 @@ async function verifyTokenApprovalRevocation(
 
     if (data.status === "0" && data.message === "NOTOK") {
       console.error("BaseScan API error:", data.result);
-      return [false, 0];
+      return [false, "0"];
     }
 
     if (
@@ -29,7 +30,7 @@ async function verifyTokenApprovalRevocation(
       !Array.isArray(data.result) ||
       data.result.length === 0
     ) {
-      return [false, 0];
+      return [false, "0"];
     }
 
     const transactions = data.result;
@@ -106,10 +107,10 @@ async function verifyTokenApprovalRevocation(
       `Address ${address} has revoked ${revocationCount} token approvals on Base, eligible: ${isEligible}`
     );
 
-    return [isEligible, revocationCount];
+    return [isEligible, revocationCount.toString()];
   } catch (error) {
     console.error("Error verifying token approval revocation on Base:", error);
-    return [false, 0];
+    return [false, "0"];
   }
 }
 
@@ -127,19 +128,21 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [mint_eligibility, revocationCount] =
-      await verifyTokenApprovalRevocation(address as Address);
+    const result = await verifyMultipleWallets(
+      req,
+      verifyTokenApprovalRevocation
+    );
 
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data: revocationCount.toString(),
+      mint_eligibility: result.mint_eligibility,
+      data: result.data || "0",
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility,
-        data: revocationCount.toString(),
+        mint_eligibility: result.mint_eligibility,
+        data: result.data || "0",
         signature,
       }),
       {

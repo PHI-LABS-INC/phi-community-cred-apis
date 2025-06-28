@@ -3,6 +3,7 @@ import { Address, isAddress } from "viem";
 import { isWithinInterval } from "date-fns";
 import { createSignature } from "@/app/lib/signature";
 import PQueue from "p-queue";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 // Create separate queues for each API key
 const API_KEYS = (process.env.BASE_SCAN_API_KEYS_BATCH || "")
@@ -78,7 +79,6 @@ async function fetchWithRateLimit(
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
-  const addresses = req.nextUrl.searchParams.get("addresses");
 
   if (!address || !isAddress(address)) {
     return NextResponse.json(
@@ -88,40 +88,21 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const addressesToCheck: Address[] = [address as Address];
-    if (addresses) {
-      const additionalAddresses = addresses
-        .split(",")
-        .map((addr) => addr.trim())
-        .filter((addr) => isAddress(addr)) as Address[];
-      addressesToCheck.push(...additionalAddresses);
-    }
-    let mint_eligibility = false;
-    let data = "0";
-    for (const addr of addressesToCheck) {
-      try {
-        const [eligible, txCount] = await verifyTransaction(addr);
-        // If this address is eligible, mark as eligible and break
-        if (eligible) {
-          mint_eligibility = true;
-          data = txCount;
-          break; // Found eligible address, no need to check others
-        }
-      } catch (error) {
-        console.warn(`Error checking address ${addr}:`, error);
-        // Continue to next address instead of failing entirely
-      }
-    }
+    const result = await verifyMultipleWallets(req, verifyJanuaryTransaction);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address, // Always use the primary address for signature
-      mint_eligibility,
-      data,
+      mint_eligibility: result.mint_eligibility,
+      data: result.data,
     });
 
     return NextResponse.json(
-      { mint_eligibility, data, signature },
+      {
+        mint_eligibility: result.mint_eligibility,
+        data: result.data,
+        signature,
+      },
       { status: 200 }
     );
   } catch (error) {
@@ -140,7 +121,9 @@ export async function GET(req: NextRequest) {
  * @returns Tuple containing [boolean eligibility status, string transaction count]
  * @throws Error if transaction verification fails
  */
-async function verifyTransaction(address: Address): Promise<[boolean, string]> {
+async function verifyJanuaryTransaction(
+  address: Address
+): Promise<[boolean, string]> {
   try {
     // Fetch transaction history from Basescan API using optimized rate limiter
     const data = await fetchWithRateLimit(

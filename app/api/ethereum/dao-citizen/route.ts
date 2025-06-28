@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 // Snapshot GraphQL API endpoint
 const SNAPSHOT_GRAPHQL_URL = "https://hub.snapshot.org/graphql";
@@ -119,9 +120,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await verifySnapshotVoting(address as Address);
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifySnapshotVoting
+    );
+
     const signature = await createSignature({
-      address: address as Address,
+      address: address as Address, // Always use the primary address for signature
       mint_eligibility,
     });
 

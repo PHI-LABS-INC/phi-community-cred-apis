@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import axios from "axios";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
 async function verifyInfectedFunRegistration(
   address: Address
@@ -41,19 +42,20 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const mint_eligibility = await verifyInfectedFunRegistration(
-      address as Address
+    const result = await verifyMultipleWalletsSimple(
+      req,
+      verifyInfectedFunRegistration
     );
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
+      mint_eligibility: result.mint_eligibility,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility,
+        mint_eligibility: result.mint_eligibility,
         signature,
       }),
       {

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress, formatUnits } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { verifyMultipleWallets } from "@/app/lib/multiWalletVerifier";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,18 +18,21 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const [mint_eligibility] = await verifyGhstToken(address as Address);
+    const result = await verifyMultipleWallets(req, verifyGhstToken);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
+      mint_eligibility: result.mint_eligibility,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, signature }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ mint_eligibility: result.mint_eligibility, signature }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error in handler:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {

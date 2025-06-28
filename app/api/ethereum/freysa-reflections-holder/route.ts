@@ -1,24 +1,69 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-import { createPublicClient, http } from "viem";
-import { mainnet } from "viem/chains";
+import { verifyMultipleWalletsSimple } from "@/app/lib/multiWalletVerifier";
 
-const client = createPublicClient({
-  chain: mainnet,
-  transport: http(),
-});
+async function verifyFreysaReflectionsHolder(
+  address: Address
+): Promise<boolean> {
+  try {
+    console.log(
+      "Checking Freysa Reflections NFT ownership for address:",
+      address
+    );
 
-// Contract ABI for ERC721 balanceOf
-const ERC721_ABI = [
-  {
-    inputs: [{ internalType: "address", name: "owner", type: "address" }],
-    name: "balanceOf",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-];
+    // Freysa Reflections contract address on Ethereum
+    const FREYSA_REFLECTIONS_CONTRACT =
+      "0x1538c5ddbb73b4f9c41b0ea94c9e99825b18be89";
+
+    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+    if (!etherscanApiKey) {
+      console.error("ETHERSCAN_API_KEY not found");
+      return false;
+    }
+
+    // Check ERC-721 token transactions for this contract
+    const url = `https://api.etherscan.io/api?module=account&action=tokennfttx&contractaddress=${FREYSA_REFLECTIONS_CONTRACT}&address=${address}&page=1&offset=100&sort=desc&apikey=${etherscanApiKey}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error("Failed to fetch from Etherscan:", response.statusText);
+      return false;
+    }
+
+    const data = await response.json();
+
+    if (data.status === "1" && Array.isArray(data.result)) {
+      // Look for incoming transfers (where the address is the 'to')
+      // or check current ownership by looking at the most recent transfers
+      const incomingTransfers = data.result.filter(
+        (tx: { to: string; from: string }) =>
+          tx.to?.toLowerCase() === address.toLowerCase()
+      );
+
+      const outgoingTransfers = data.result.filter(
+        (tx: { to: string; from: string }) =>
+          tx.from?.toLowerCase() === address.toLowerCase()
+      );
+
+      // Calculate net balance (incoming - outgoing)
+      const netBalance = incomingTransfers.length - outgoingTransfers.length;
+
+      if (netBalance > 0) {
+        console.log(
+          `Address ${address} holds ${netBalance} Freysa Reflections NFT(s)`
+        );
+        return true;
+      }
+    }
+
+    console.log(`No Freysa Reflections NFTs found for address ${address}`);
+    return false;
+  } catch (error) {
+    console.error("Error verifying Freysa Reflections holder status:", error);
+    return false;
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,53 +79,36 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get verification results
-    const [mint_eligibility] = await verifyFreysaNFT(address as Address);
+    const { mint_eligibility } = await verifyMultipleWalletsSimple(
+      req,
+      verifyFreysaReflectionsHolder
+    );
 
-    // Generate cryptographic signature of the verification results
     const signature = await createSignature({
-      address: address as Address,
+      address: address as Address, // Always use the primary address for signature
       mint_eligibility,
     });
 
     return new Response(JSON.stringify({ mint_eligibility, signature }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      },
     });
   } catch (error) {
-    console.error("Error in handler:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
+    console.error("Error processing GET request:", {
+      error,
+      timestamp: new Date().toISOString(),
     });
-  }
-}
-
-/**
- * Verifies if an address owns an NFT from the Freysa Reflections 2049 collection on Ethereum
- *
- * @param address - Ethereum address to check
- * @returns Tuple containing [boolean eligibility status, string NFT count]
- * @throws Error if verification fails
- */
-async function verifyFreysaNFT(address: Address): Promise<[boolean]> {
-  try {
-    const FREYSA_CONTRACT = "0x3BFb2F2B61Be8f2f147F5F53a906aF00C263D9b3";
-
-    // Query NFT balance directly from contract
-    const balance = (await client.readContract({
-      address: FREYSA_CONTRACT,
-      abi: ERC721_ABI,
-      functionName: "balanceOf",
-      args: [address],
-    })) as bigint;
-
-    const nftCount = Number(balance);
-    const isEligible = nftCount > 0;
-
-    return [isEligible];
-  } catch (error) {
-    console.error("Error verifying Freysa NFT:", error);
-    throw new Error("Failed to verify Freysa NFT ownership");
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Internal server error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }
