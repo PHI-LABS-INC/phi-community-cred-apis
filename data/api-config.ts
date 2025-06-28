@@ -505,14 +505,6 @@ export const endpoints = [
   },
   {
     method: "GET",
-    path: "/api/ethereum/nounce-supporter",
-    id: "verifynounce",
-    description:
-      "Verifies if an Ethereum address has held a Support NFT and returns eligibility status with cryptographic signature",
-    supportsMultiWallet: true,
-  },
-  {
-    method: "GET",
     path: "/api/ethereum/artblocks-purchaser",
     id: "verifyartblockspurchaser",
     description:
