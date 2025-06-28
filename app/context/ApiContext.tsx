@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   ReactNode,
+  Suspense,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -16,18 +17,31 @@ interface ApiContextType {
 
 const ApiContext = createContext<ApiContextType | null>(null);
 
-export function ApiProvider({ children }: { children: ReactNode }) {
-  const [activeEndpoint, setActiveEndpointState] = useState("introduction");
-  const router = useRouter();
+// Separate component to handle search params
+function SearchParamsHandler({
+  onEndpointChange,
+}: {
+  onEndpointChange: (endpoint: string) => void;
+}) {
   const searchParams = useSearchParams();
 
-  // Initialize from URL on mount
   useEffect(() => {
     const endpointFromUrl = searchParams.get("endpoint");
     if (endpointFromUrl) {
-      setActiveEndpointState(endpointFromUrl);
+      onEndpointChange(endpointFromUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, onEndpointChange]);
+
+  return null;
+}
+
+export function ApiProvider({ children }: { children: ReactNode }) {
+  const [activeEndpoint, setActiveEndpointState] = useState("introduction");
+  const router = useRouter();
+
+  const handleEndpointChange = (endpoint: string) => {
+    setActiveEndpointState(endpoint);
+  };
 
   const setActiveEndpoint = (id: string) => {
     setActiveEndpointState(id);
@@ -43,6 +57,9 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 
   return (
     <ApiContext.Provider value={{ activeEndpoint, setActiveEndpoint }}>
+      <Suspense fallback={null}>
+        <SearchParamsHandler onEndpointChange={handleEndpointChange} />
+      </Suspense>
       {children}
     </ApiContext.Provider>
   );
