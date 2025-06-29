@@ -551,6 +551,14 @@ export const endpoints = [
       "Verifies if an Ethereum address has won Farcaster Rounds rewards 3+ times and returns eligibility status with cryptographic signature",
     supportsMultiWallet: true,
   },
+  {
+    method: "GET",
+    path: "/api/ethereum/nouns-supporter",
+    id: "verifynouns",
+    description:
+      "Verifies if an Ethereum address has held a Support NFT and returns eligibility status with cryptographic signature",
+    supportsMultiWallet: true,
+  },
 ];
 
 export const parameters = [
