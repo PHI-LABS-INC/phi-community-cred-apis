@@ -489,6 +489,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has won Farcaster Rounds rewards 3+ times and returns eligibility status with cryptographic signature",
   },
+  {
+    method: "GET",
+    path: "/api/ethereum/nouns-supporter",
+    id: "verifynounsupporter",
+    description:
+      "Verifies if an Ethereum address has held a Nouns NFT and returns eligibility status with cryptographic signature",
+  },
 ];
 
 export const parameters = [
