@@ -14,6 +14,7 @@ const BASE_CONTRACTS = {
   GNAR: "0x880fb3cf5c6cc2d7dfc13a993e839a9411200c17", // GNAR
   BASE_NOUNS: "0xbf57d0535e10e7033447174404b9bed3d9ef4c88", // Base Nouns
   YELLOW_COLLECTIVE: "0xcb2aced00157337b25dd2824c3863c2159bdaf1b", // Yellow Collective
+  COLLECTIVE_NOUNS: "0x220e41499cf4d93a3629a5509410cbf9e6e0b109", // Collective Nouns
 };
 
 // Create public clients for different chains
