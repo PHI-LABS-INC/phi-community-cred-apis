@@ -496,6 +496,13 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has held a Nouns NFT and returns eligibility status with cryptographic signature",
   },
+  {
+    method: "GET",
+    path: "/api/ethereum/my-first-zora",
+    id: "verifymyfirstzora",
+    description:
+      "Verifies if an Ethereum address has minted art on Zora and returns eligibility status with the first mint data, enabling a generative cred NFT showcasing their first Zora creation",
+  }
 ];
 
 export const parameters = [
