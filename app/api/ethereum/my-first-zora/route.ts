@@ -2,24 +2,21 @@ import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 
-// Rate limiting configuration
-const RATE_LIMIT_DELAY = 1000;
-const MAX_RETRIES = 3;
-const RETRY_DELAY_BASE = 2000;
-
-const requestTimestamps = new Map<string, number>();
-
-function isRateLimited(address: string): boolean {
-  const lastRequest = requestTimestamps.get(address);
-  const now = Date.now();
-
-  if (lastRequest && now - lastRequest < RATE_LIMIT_DELAY) {
-    return true;
-  }
-
-  requestTimestamps.set(address, now);
-  return false;
+interface ZoraCollectionEdge {
+  node: {
+    media?: {
+      previewImage?: {
+        previewImage?: {
+          downloadableUri?: string;
+        };
+      };
+    };
+  };
 }
+
+const ZORA_API_ENDPOINT = "https://api.zora.co/universal/graphql";
+const MAX_RETRIES = 3;
+const RETRY_DELAY_BASE = 1000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -39,49 +36,21 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check rate limiting
-    if (isRateLimited(address)) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Rate limit exceeded. Please wait before making another request.",
-          retry_after: RATE_LIMIT_DELAY / 1000,
-        }),
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "Retry-After": (RATE_LIMIT_DELAY / 1000).toString(),
-          },
-        }
-      );
-    }
+    // Get verification results
+    const mint_eligibility = await verifyFirstZoraMint(address as Address);
 
-    // Check if the address has minted art on Zora
-    const [mint_eligibility, firstMintData] = await verifyFirstZoraMint(
-      address as Address
-    );
-
-    // Generate cryptographic signature of the verification result
+    // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
-      data: firstMintData,
     });
 
-    return new Response(
-      JSON.stringify({
-        mint_eligibility,
-        data: firstMintData,
-        signature,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error("Error in my-first-zora verifier:", error);
+    console.error("Error in handler:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
@@ -90,14 +59,13 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Verifies if an address has minted art on Zora and returns first mint data
+ * Verifies if an address has collected items with downloadable URIs on Zora
+ *
  * @param address - Ethereum address to check
- * @returns Tuple containing [boolean eligibility status, string first mint data]
+ * @returns Boolean indicating if address has collected items with downloadable URIs
  * @throws Error if verification fails
  */
-async function verifyFirstZoraMint(
-  address: Address
-): Promise<[boolean, string]> {
+async function verifyFirstZoraMint(address: Address): Promise<boolean> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -106,17 +74,24 @@ async function verifyFirstZoraMint(
       const query = `
 query ProfileAndMints($address: String!) {
   profile(identifier: $address) {
-    created: profileCollectionsAndTokens(listType: CREATED) {
-      count
-    }
-    collected: profileCollectionsAndTokens(listType: COLLECTED) {
-      count
+    collectedCollectionsOrTokens(first: 1) {
+      edges {
+        node {
+          media {
+            previewImage {
+              previewImage {
+                downloadableUri
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
       `;
 
-      const response = await fetch("https://api.zora.co/universal/graphql", {
+      const response = await fetch(ZORA_API_ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,62 +105,103 @@ query ProfileAndMints($address: String!) {
       });
 
       if (response.status === 429) {
-        // Rate limited - wait with exponential backoff
-        const retryDelay = RETRY_DELAY_BASE * Math.pow(2, attempt - 1);
+        if (attempt < MAX_RETRIES) {
+          const retryDelay = RETRY_DELAY_BASE * Math.pow(2, attempt - 1);
+          console.log(
+            `Rate limited by Zora API, attempt ${attempt}/${MAX_RETRIES}, waiting ${retryDelay}ms for address ${address}`
+          );
+          await sleep(retryDelay);
+          continue;
+        }
         console.log(
-          `Rate limited by Zora API, attempt ${attempt}/${MAX_RETRIES}, waiting ${retryDelay}ms`
+          `Rate limited by Zora API after ${MAX_RETRIES} attempts for address ${address}`
         );
-        await sleep(retryDelay);
-        lastError = new Error(`Zora API rate limited: ${response.status}`);
-        continue;
+        return false;
+      }
+
+      if (response.status === 503 || response.status === 502) {
+        if (attempt < MAX_RETRIES) {
+          const retryDelay = RETRY_DELAY_BASE * Math.pow(2, attempt - 1);
+          console.log(
+            `Zora API temporarily unavailable, attempt ${attempt}/${MAX_RETRIES}, waiting ${retryDelay}ms for address ${address}`
+          );
+          await sleep(retryDelay);
+          continue;
+        }
+        console.log(
+          `Zora API unavailable after ${MAX_RETRIES} attempts for address ${address}`
+        );
+        return false;
       }
 
       if (!response.ok) {
-        throw new Error(`Zora API request failed: ${response.status}`);
+        if (attempt < MAX_RETRIES) {
+          const retryDelay = RETRY_DELAY_BASE * Math.pow(2, attempt - 1);
+          console.log(
+            `Zora API request failed with status ${response.status}, attempt ${attempt}/${MAX_RETRIES}, waiting ${retryDelay}ms for address ${address}`
+          );
+          await sleep(retryDelay);
+          continue;
+        }
+        console.log(
+          `Zora API request failed with status ${response.status} after ${MAX_RETRIES} attempts for address ${address}`
+        );
+        return false;
       }
 
       const data = await response.json();
 
       if (data.errors) {
-        throw new Error(`Zora API errors: ${JSON.stringify(data.errors)}`);
+        if (attempt < MAX_RETRIES) {
+          const retryDelay = RETRY_DELAY_BASE * Math.pow(2, attempt - 1);
+          console.log(
+            `Zora API GraphQL errors, attempt ${attempt}/${MAX_RETRIES}, waiting ${retryDelay}ms for address ${address}:`,
+            data.errors
+          );
+          await sleep(retryDelay);
+          continue;
+        }
+        console.log(
+          `Zora API GraphQL errors after ${MAX_RETRIES} attempts for address ${address}:`,
+          data.errors
+        );
+        return false;
       }
 
       const profile = data.data?.profile;
       if (!profile) {
-        return [false, ""];
+        return false;
       }
 
-      const createdCount = profile.created?.count || 0;
-      const collectedCount = profile.collected?.count || 0;
+      const collectedItems = profile.collectedCollectionsOrTokens?.edges || [];
 
-      // Return true if user has either created or collected any items
-      const hasActivity = createdCount > 0 || collectedCount > 0;
+      // Check if any collected item has a downloadable URI
+      const hasDownloadableUri = collectedItems.some(
+        (edge: ZoraCollectionEdge) => {
+          const media = edge.node?.media;
+          return media?.previewImage?.previewImage?.downloadableUri;
+        }
+      );
 
-      if (hasActivity) {
-        return [true, (createdCount + collectedCount).toString()];
-      }
-
-      return [false, ""];
+      return hasDownloadableUri;
     } catch (error) {
       lastError = error as Error;
       console.error(
-        `Error verifying first Zora mint (attempt ${attempt}/${MAX_RETRIES}):`,
+        `Error verifying first Zora mint (attempt ${attempt}/${MAX_RETRIES}) for address ${address}:`,
         error
       );
 
-      // If this is the last attempt, throw the error
       if (attempt === MAX_RETRIES) {
         break;
       }
 
-      // Wait before retrying (exponential backoff)
       const retryDelay = RETRY_DELAY_BASE * Math.pow(2, attempt - 1);
       await sleep(retryDelay);
     }
   }
 
-  // If we get here, all retries failed
-  throw new Error(
-    `Failed to verify first Zora mint after ${MAX_RETRIES} attempts: ${lastError?.message}`
+  console.error(
+    `Failed to verify first Zora mint after ${MAX_RETRIES} attempts for address ${address}: ${lastError?.message}`
   );
+  return false;
 }
