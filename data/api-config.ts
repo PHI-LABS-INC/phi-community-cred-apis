@@ -1,6 +1,27 @@
 export const endpoints = [
   {
     method: "GET",
+    path: "/api/farcaster/channel-activity",
+    id: "verifyfarcasteractivity",
+    description:
+      "Verifies if an Ethereum address is active on Farcaster by having both followers and following others",
+  },
+  {
+    method: "GET",
+    path: "/api/base/gas-saver",
+    id: "verifygassaver",
+    description:
+      "Verifies if an Ethereum address has made any transactions with gas price under 10 gwei on Base and returns the lowest gas price used",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/eth-maxi",
+    id: "verifyethmaxi",
+    description:
+      "Verifies if an Ethereum address has made 100 or more transactions on Ethereum mainnet and returns the total transaction count",
+  },
+  {
+    method: "GET",
     path: "/api/cyber/cyber-january-ransactor",
     id: "verifytx",
     description:
@@ -502,7 +523,7 @@ export const endpoints = [
     id: "verifymyfirstzora",
     description:
       "Verifies if an Ethereum address has minted art on Zora and returns eligibility status with the first mint data, enabling a generative cred NFT showcasing their first Zora creation",
-  }
+  },
 ];
 
 export const parameters = [
