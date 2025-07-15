@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import axios from "axios";
 
 // GraphQL endpoint for Arweave
 const ARWEAVE_GRAPHQL_ENDPOINT = "https://arweave.net/graphql";
@@ -15,6 +16,61 @@ interface ArweaveResponse {
       }>;
     };
   };
+}
+
+async function verifyParagraphPost(
+  address: Address
+): Promise<[boolean, string]> {
+  try {
+    console.log("Checking Paragraph posts for address:", address);
+
+    const query = `
+      query GetParagraphPosts($contributor: String!) {
+        transactions(
+          tags: [
+            { name: "AppName", values: ["Paragraph"] }
+            { name: "Contributor", values: [$contributor] }
+          ]
+          sort: HEIGHT_DESC
+          first: 100
+        ) {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await axios.post<ArweaveResponse>(
+      ARWEAVE_GRAPHQL_ENDPOINT,
+      {
+        query,
+        variables: {
+          contributor: address,
+        },
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (response.status !== 200) {
+      throw new Error(`GraphQL request failed: ${response.statusText}`);
+    }
+
+    const posts = response.data?.data?.transactions?.edges || [];
+    const postCount = posts.length;
+    const hasPosted = postCount > 0;
+
+    return [hasPosted, postCount.toString()];
+  } catch (error) {
+    console.error("Error verifying Paragraph post:", error);
+    return [false, "0"];
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -62,59 +118,5 @@ export async function GET(req: NextRequest) {
         headers: { "Content-Type": "application/json" },
       }
     );
-  }
-}
-
-async function verifyParagraphPost(
-  address: Address
-): Promise<[boolean, string]> {
-  try {
-    console.log("Checking Paragraph posts for address:", address);
-
-    const query = `
-      query GetParagraphPosts($contributor: String!) {
-        transactions(
-          tags: [
-            { name: "AppName", values: ["Paragraph"] }
-            { name: "Contributor", values: [$contributor] }
-          ]
-          sort: HEIGHT_DESC
-          first: 100
-        ) {
-          edges {
-            node {
-              id
-            }
-          }
-        }
-      }
-    `;
-
-    const response = await fetch(ARWEAVE_GRAPHQL_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query,
-        variables: {
-          contributor: address,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`GraphQL request failed: ${response.statusText}`);
-    }
-
-    const result = (await response.json()) as ArweaveResponse;
-    const posts = result.data?.transactions?.edges || [];
-    const postCount = posts.length;
-    const hasPosted = postCount > 0;
-
-    return [hasPosted, postCount.toString()];
-  } catch (error) {
-    console.error("Error verifying Paragraph post:", error);
-    return [false, "0"];
   }
 }
