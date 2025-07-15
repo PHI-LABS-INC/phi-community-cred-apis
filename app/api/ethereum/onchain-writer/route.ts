@@ -85,14 +85,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await verifyParagraphPost(address as Address);
+    const [mint_eligibility] = await verifyParagraphPost(address as Address);
 
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: mint_eligibility,
+      mint_eligibility: mint_eligibility as boolean,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
