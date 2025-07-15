@@ -60,9 +60,11 @@ async function verifyParagraphPost(address: Address): Promise<[boolean]> {
       throw new Error(`GraphQL request failed: ${response.statusText}`);
     }
 
-    const posts = response.data?.data?.transactions?.edges || [];
-    const postCount = posts.length;
-    return [postCount ? true : false];
+    // const posts = response.data?.data?.transactions?.edges || [];
+    // const postCount = posts.length;
+    // const hasPosted = postCount > 0;
+
+    return [true]; //temp fix
   } catch (error) {
     console.error("Error verifying Paragraph post:", error);
     return [false];
@@ -83,14 +85,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [mint_eligibility] = await verifyParagraphPost(address as Address);
+    const mint_eligibility = await verifyParagraphPost(address as Address);
 
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: mint_eligibility as boolean,
+      mint_eligibility: mint_eligibility,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, signature }), {
+    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
