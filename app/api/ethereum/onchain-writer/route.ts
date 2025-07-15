@@ -18,9 +18,7 @@ interface ArweaveResponse {
   };
 }
 
-async function verifyParagraphPost(
-  address: Address
-): Promise<[boolean, string]> {
+async function verifyParagraphPost(address: Address): Promise<[boolean]> {
   try {
     console.log("Checking Paragraph posts for address:", address);
 
@@ -66,10 +64,10 @@ async function verifyParagraphPost(
     const postCount = posts.length;
     const hasPosted = postCount > 0;
 
-    return [hasPosted, postCount.toString()];
+    return [hasPosted];
   } catch (error) {
     console.error("Error verifying Paragraph post:", error);
-    return [false, "0"];
+    return [false];
   }
 }
 
@@ -87,17 +85,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [mint_eligibility, data] = await verifyParagraphPost(
-      address as Address
-    );
+    const [mint_eligibility] = await verifyParagraphPost(address as Address);
 
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility,
-      data,
+      mint_eligibility: mint_eligibility as boolean,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, data, signature }), {
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
