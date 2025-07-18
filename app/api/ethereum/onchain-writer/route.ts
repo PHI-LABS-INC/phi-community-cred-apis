@@ -60,11 +60,11 @@ async function verifyParagraphPost(address: Address): Promise<[boolean]> {
       throw new Error(`GraphQL request failed: ${response.statusText}`);
     }
 
-    // const posts = response.data?.data?.transactions?.edges || [];
-    // const postCount = posts.length;
-    // const hasPosted = postCount > 0;
+    const posts = response.data?.data?.transactions?.edges || [];
+    const postCount = posts.length;
+    const hasPosted = postCount > 0;
 
-    return [true]; //temp fix
+    return [hasPosted];
   } catch (error) {
     console.error("Error verifying Paragraph post:", error);
     return [false];
