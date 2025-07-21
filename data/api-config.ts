@@ -1,6 +1,69 @@
 export const endpoints = [
   {
     method: "GET",
+    path: "/api/base/balancer-swap",
+    id: "verifybalancerswap",
+    description:
+      "Verifies if an Ethereum address has performed at least 1 swap on Balancer (Base) using the Router/BatchRouter and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/balancer-swap-10x",
+    id: "verifybalancerswap10x",
+    description:
+      "Verifies if an Ethereum address has performed at least 10 swaps on Balancer (Base) using the Router/BatchRouter and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/balancer-v3-usdc-aave-liquidity",
+    id: "verifybalancerv3usdcaave",
+    description:
+      "Verifies if an Ethereum address has added liquidity to the USDC-Aave V3 pool on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/balancer-v3-btf-bmacro-liquidity",
+    id: "verifybalancerv3btfbmacro",
+    description:
+      "Verifies if an Ethereum address has added liquidity to the BTF:BMACRO V3 pool on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/balancer-v3-cow-weth-liquidity",
+    id: "verifybalancerv3cowweth",
+    description:
+      "Verifies if an Ethereum address has added liquidity to the COW/WETH V3 pool on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/join-balancer-v2",
+    id: "verifyjoinbalancerv2",
+    description:
+      "Verifies if an Ethereum address has joined Balancer V2 on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/balancer-bal-holder",
+    id: "verifybalancerbalholder",
+    description:
+      "Verifies if an Ethereum address holds any BAL tokens on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/lock-veBal",
+    id: "verifylockvebal",
+    description:
+      "Verifies if an Ethereum address has locked BAL to get veBAL on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/vote-pool-gauges",
+    id: "verifyvotepoolgauges",
+    description:
+      "Verifies if an Ethereum address has voted on pool gauges on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
     path: "/api/farcaster/channel-activity",
     id: "verifyfarcasteractivity",
     description:
