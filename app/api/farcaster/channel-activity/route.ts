@@ -2,51 +2,67 @@ import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 
-const WEB3_BIO_API_URL = "https://api.web3.bio/profile/farcaster";
+// Neynar API configuration
+const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
+const NEYNAR_BASE_URL = "https://api.neynar.com/v2";
 
-interface Web3BioResponse {
-  address: string;
-  identity: string;
-  platform: string;
-  displayName: string;
-  avatar: string;
-  description: string;
-  social: {
-    uid: number;
-    follower: number;
-    following: number;
+interface NeynarUser {
+  fid: number;
+  username: string;
+  display_name: string;
+  pfp_url: string;
+  follower_count: number;
+  following_count: number;
+  verifications: string[];
+  verified_addresses: {
+    eth_addresses: string[];
+    sol_addresses: string[];
   };
+}
+
+async function getFidFromAddress(address: string): Promise<number | null> {
+  try {
+    const response = await fetch(
+      `${NEYNAR_BASE_URL}/farcaster/user/bulk-by-address?addresses=${address}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "x-api-key": NEYNAR_API_KEY || "",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data: Record<string, NeynarUser[]> = await response.json();
+    const users = data[address.toLowerCase()];
+
+    return users && users.length > 0 ? users[0].fid : null;
+  } catch (error) {
+    console.error("Error fetching FID from address:", error);
+    return null;
+  }
 }
 
 async function verifyFarcasterActivity(address: Address): Promise<boolean> {
   try {
-    console.log("Checking Farcaster activity for address:", address);
-
-    const url = `${WEB3_BIO_API_URL}/${address}`;
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      console.error(`Failed to fetch Farcaster profile: ${response.status}`);
+    if (!NEYNAR_API_KEY) {
+      console.error("Neynar API key not configured");
       return false;
     }
 
-    const profile = (await response.json()) as Web3BioResponse;
-
-    if (!profile.social) {
-      console.log(`No Farcaster social data found for address ${address}`);
+    // Get FID from address using bulk endpoint
+    const fid = await getFidFromAddress(address);
+    if (!fid) {
+      console.log(`No Farcaster profile found for address ${address}`);
       return false;
     }
 
-    // Check if the user has both followers and is following others
-    // This indicates they are actively participating in the Farcaster community
-    const hasFollowers = profile.social.follower > 0;
-    const isFollowing = profile.social.following > 0;
-
-    return hasFollowers && isFollowing;
+    // User exists on Farcaster if we found a FID
+    console.log(`Farcaster profile found for ${address} with FID: ${fid}`);
+    return true;
   } catch (error) {
     console.error("Error verifying Farcaster activity status:", {
       error,
@@ -66,6 +82,16 @@ export async function GET(req: NextRequest) {
         JSON.stringify({ error: "Invalid address provided" }),
         {
           status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!NEYNAR_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Neynar API key not configured" }),
+        {
+          status: 500,
           headers: { "Content-Type": "application/json" },
         }
       );
