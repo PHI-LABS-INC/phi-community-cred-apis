@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
+import { getAddress } from "ethers";
 import { createSignature } from "@/app/lib/signature";
 import axios from "axios";
 
@@ -85,10 +86,24 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [mint_eligibility] = await verifyParagraphPost(address as Address);
+    // Validate and checksum the address
+    let checksummedAddress: Address;
+    try {
+      checksummedAddress = getAddress(address) as Address;
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid address checksum" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const [mint_eligibility] = await verifyParagraphPost(checksummedAddress);
 
     const signature = await createSignature({
-      address: address as Address,
+      address: checksummedAddress,
       mint_eligibility: mint_eligibility as boolean,
     });
 
