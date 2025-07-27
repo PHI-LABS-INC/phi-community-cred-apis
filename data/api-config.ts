@@ -587,6 +587,97 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has minted art on Zora and returns eligibility status with the first mint data, enabling a generative cred NFT showcasing their first Zora creation",
   },
+  {
+    method: "GET",
+    path: "/api/ethereum/curve-swap",
+    id: "verifycurveswap",
+    description:
+      "Verifies if an Ethereum address has used CurveRouter v1.2 for at least 1 swap and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/curve-swap-10x",
+    id: "verifycurveswap10x",
+    description:
+      "Verifies if an Ethereum address has used CurveRouter v1.2 for at least 10 swaps and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/crv-holder",
+    id: "verifycrvholder",
+    description:
+      "Verifies if an Ethereum address holds any CRV tokens and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/crvusd-holder",
+    id: "verifycrvusdholder",
+    description:
+      "Verifies if an Ethereum address holds any crvUSD tokens and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/scrvusd-holder",
+    id: "verifyscrvusdholder",
+    description:
+      "Verifies if an Ethereum address holds any scrvUSD tokens and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/curve-lp",
+    id: "verifycurvelp",
+    description:
+      "Verifies if an Ethereum address has LP positions in Curve pools (stETH/ETH, crvUSD/USDC) and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/curve-loan",
+    id: "verifycurveloan",
+    description:
+      "Verifies if an Ethereum address has created a loan on Curve (crvUSD lending) and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/curve-lock",
+    id: "verifycurvelock",
+    description:
+      "Verifies if an Ethereum address has locked CRV tokens for veCRV and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/curve-vote-gauge",
+    id: "verifycurvevotegauge",
+    description:
+      "Verifies if an Ethereum address has voted on Curve gauges and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/curve-claim-rewards",
+    id: "verifycurveclaimrewards",
+    description:
+      "Verifies if an Ethereum address has claimed veCRV rewards and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/sd-crv-holder",
+    id: "verifysdcrvholder",
+    description:
+      "Verifies if an Ethereum address holds any sdCRV tokens (StakeDAO) and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/cvx-crv-holder",
+    id: "verifycvxcrvholder",
+    description:
+      "Verifies if an Ethereum address holds any cvxCRV tokens (Convex Finance) and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/cvx-crv-staker",
+    id: "verifycvxcrvstaker",
+    description:
+      "Verifies if an Ethereum address has staked cvxCRV tokens on Convex Finance and returns eligibility status with cryptographic signature",
+  },
 ];
 
 export const parameters = [
