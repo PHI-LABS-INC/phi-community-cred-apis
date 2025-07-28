@@ -1,51 +1,15 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-
-const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_01;
-
-interface BaseScanTransaction {
-  blockNumber: string;
-  timeStamp: string;
-  hash: string;
-  from: string;
-  to: string;
-  value: string;
-  input: string;
-  methodId: string;
-  functionName: string;
-  contractAddress: string;
-  gasUsed: string;
-  gasPrice: string;
-  isError: string;
-}
-
-interface BaseScanResponse {
-  status: string;
-  message: string;
-  result: BaseScanTransaction[];
-}
+import { getTransactions } from "@/app/lib/smart-wallet";
 
 async function verifyDeFiTrades(address: Address): Promise<[boolean, number]> {
   try {
-    if (!BASESCAN_API_KEY) {
-      console.error("Missing required BaseScan API key");
-      return [false, 0];
-    }
-
     console.log(`[DEBUG] Fetching transactions for address: ${address}`);
 
-    // Fetch transaction history from BaseScan API
-    const apiUrl = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${BASESCAN_API_KEY}`;
-    const response = await fetch(apiUrl);
-    const data = (await response.json()) as BaseScanResponse;
+    // Fetch transaction history using getTransactions from smart-wallet.ts
+    const transactions = await getTransactions(address, 8453); // Base chain
 
-    if (data.status !== "1" || !Array.isArray(data.result)) {
-      console.error("Error fetching transaction data from BaseScan:", data);
-      return [false, 0];
-    }
-
-    const transactions = data.result;
     console.log(`[DEBUG] Total transactions found: ${transactions.length}`);
 
     if (transactions.length === 0) {
@@ -104,7 +68,7 @@ async function verifyDeFiTrades(address: Address): Promise<[boolean, number]> {
       }
 
       const toAddress = tx.to?.toLowerCase();
-      const input = tx.input.toLowerCase();
+      const input = tx.input?.toLowerCase() || "";
       const methodId = input.slice(0, 10);
 
       // Check if transaction is to a known DEX contract
@@ -113,17 +77,9 @@ async function verifyDeFiTrades(address: Address): Promise<[boolean, number]> {
       // Check if transaction uses a known swap function
       const isSwapFunction = swapFunctionSignatures.includes(methodId);
 
-      // Check for swap-related patterns in function names
-      const functionName = tx.functionName?.toLowerCase() || "";
-      const hasSwapInName =
-        functionName.includes("swap") ||
-        functionName.includes("exchange") ||
-        functionName.includes("trade") ||
-        functionName.includes("exact");
-
       // Count as a trade if it meets our criteria
       if (
-        (isDexContract || isSwapFunction || hasSwapInName) &&
+        (isDexContract || isSwapFunction) &&
         tx.isError === "0" && // Only successful transactions
         !uniqueTradeHashes.has(tx.hash)
       ) {

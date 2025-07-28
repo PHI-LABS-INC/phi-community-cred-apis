@@ -1,38 +1,15 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { getTransactions } from "@/app/lib/smart-wallet";
 
 async function verifyTokenApprovalRevocation(
   address: Address
 ): Promise<[boolean, number]> {
   try {
-    const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_02;
+    // Fetch all transactions using getTransactions from smart-wallet.ts
+    const transactions = await getTransactions(address, 8453); // Base chain
 
-    if (!BASESCAN_API_KEY) {
-      console.error("Missing BaseScan API key");
-      return [false, 0];
-    }
-
-    // Use BaseScan API to get transactions for Base network (chainid=8453)
-    const apiUrl = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${BASESCAN_API_KEY}`;
-
-    const response = await fetch(apiUrl);
-    const data = await response.json();
-
-    if (data.status === "0" && data.message === "NOTOK") {
-      console.error("BaseScan API error:", data.result);
-      return [false, 0];
-    }
-
-    if (
-      !data.result ||
-      !Array.isArray(data.result) ||
-      data.result.length === 0
-    ) {
-      return [false, 0];
-    }
-
-    const transactions = data.result;
     let revocationCount = 0;
 
     // Check each transaction for approval revocation patterns

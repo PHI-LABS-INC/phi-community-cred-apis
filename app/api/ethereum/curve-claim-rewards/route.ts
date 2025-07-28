@@ -7,8 +7,6 @@ import { hasContractInteraction } from "@/app/lib/smart-wallet";
 const CURVE_REWARDS_CLAIM =
   "0xa464e6dcda8ac41e03616f95f4bc98a13b8922dc" as Address;
 
-type Tx = { to?: string };
-
 async function hasClaimedRewards(address: Address): Promise<boolean> {
   try {
     return await hasContractInteraction(

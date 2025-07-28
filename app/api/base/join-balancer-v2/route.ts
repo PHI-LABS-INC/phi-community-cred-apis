@@ -1,41 +1,29 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
 const BALANCER_V2_VAULT = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 const JOIN_METHOD = "0xb95cac28";
-const ETHERSCAN_API = "https://api.etherscan.io/v2/api";
-const API_KEY = process.env.BASE_SCAN_API_KEY_02;
-
-type Tx = { to?: string; methodId?: string };
 
 async function hasJoinedBalancerV2(address: Address): Promise<boolean> {
-  const url = `${ETHERSCAN_API}?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
   try {
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (
-      !data ||
-      (data.status === "0" &&
-        data.message === "NOTOK" &&
-        data.result === "Missing/Invalid API Key")
-    ) {
-      throw new Error("Missing or invalid API key");
-    }
-    if (!data.result || !Array.isArray(data.result)) return false;
-    return (data.result as Tx[]).some(
-      (tx) =>
-        tx.to?.toLowerCase() === BALANCER_V2_VAULT.toLowerCase() &&
-        tx.methodId?.toLowerCase() === JOIN_METHOD.toLowerCase()
+    // Use hasContractInteraction to check for at least one interaction with Balancer V2 Vault using join method
+    return await hasContractInteraction(
+      address,
+      BALANCER_V2_VAULT as Address,
+      [JOIN_METHOD], // Specific join method
+      1, // At least 1 interaction
+      8453 // Base chain
     );
   } catch (error) {
-    console.error("Error verifying Balancer V3 add liquidity:", {
+    console.error("Error verifying Balancer V2 join:", {
       error,
       address,
       timestamp: new Date().toISOString(),
     });
     throw new Error(
-      `Failed to verify Balancer V3 add liquidity: ${
+      `Failed to verify Balancer V2 join: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
     );

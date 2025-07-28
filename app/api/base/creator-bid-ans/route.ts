@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get verification results by checking if the wallet interacted with the specified contract via BaseScan API
+    // Get verification results by checking if the wallet interacted with the specified contract
     const [mint_eligibility] = await verifyANS(address as Address);
 
     // Generate cryptographic signature of the verification results
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Verifies if an address has interacted with the specified contract using the BaseScan API.
+ * Verifies if an address has interacted with the specified contract using smart-wallet.ts.
  *
  * @param address - Ethereum address to check
  * @returns Tuple containing [boolean eligibility status]
@@ -55,38 +56,18 @@ async function verifyANS(address: Address): Promise<[boolean]> {
   try {
     const CONTRACT_ADDRESS = "0x9e711dD562DD7C84127780949Ac3FD5a83136676";
 
-    const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY;
-    if (!BASESCAN_API_KEY) {
-      throw new Error("Missing BaseScan API key");
-    }
-
-    const apiUrl = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${BASESCAN_API_KEY}`;
-
-    const response = await fetch(apiUrl);
-    const data = await response.json();
-
-    if (!Array.isArray(data.result)) {
-      console.error("BaseScan API error: result is not an array", data);
-      throw new Error("Failed to fetch transactions from BaseScan");
-    }
-
-    if (
-      data.status !== "1" &&
-      !(data.status === "0" && data.result.length === 0)
-    ) {
-      console.error("BaseScan API error:", data);
-      throw new Error("Failed to fetch transactions from BaseScan");
-    }
-
-    // Check if any transaction involved an interaction with the specified contract.
-    const hasInteracted = data.result.some(
-      (tx: { to?: string }) =>
-        tx.to && tx.to.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()
+    // Check if address has interacted with the contract at least once
+    const hasInteracted = await hasContractInteraction(
+      address,
+      CONTRACT_ADDRESS as Address,
+      [], // No specific method required
+      1, // At least 1 interaction
+      8453 // Base chain
     );
 
     return [hasInteracted];
   } catch (error) {
-    console.error("Error verifying contract interaction via BaseScan:", error);
+    console.error("Error verifying contract interaction:", error);
     throw new Error("Failed to verify contract interaction");
   }
 }

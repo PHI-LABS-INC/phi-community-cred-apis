@@ -1,56 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-
-const API_KEY = process.env.BASE_SCAN_API_KEY;
-if (!API_KEY) {
-  throw new Error("No API key configured");
-}
-
-interface BaseScanResponse {
-  status: string;
-  message: string;
-  result:
-    | Array<{
-        to: string;
-        isError: string;
-      }>
-    | string;
-}
-
-async function fetchWithRetry(
-  url: string,
-  retries = 3
-): Promise<BaseScanResponse> {
-  const tryFetch = async (attempt: number) => {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-
-      try {
-        const response = await fetch(url, { signal: controller.signal });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        clearTimeout(timeout);
-        return data;
-      } catch (error) {
-        clearTimeout(timeout);
-        throw error;
-      }
-    } catch (error) {
-      if (attempt < retries) {
-        const backoff = Math.min(1000 * Math.pow(2, attempt), 5000);
-        await new Promise((resolve) => setTimeout(resolve, backoff));
-        return tryFetch(attempt + 1);
-      }
-      throw error;
-    }
-  };
-
-  return tryFetch(1);
-}
+import { getTransactions } from "@/app/lib/smart-wallet";
 
 export async function GET(req: NextRequest) {
   try {
@@ -115,24 +66,13 @@ async function verifyTimeswapLiquidity(address: Address): Promise<[boolean]> {
     // Timeswap V2 Factory contract on Base
     const TIMESWAP_FACTORY = "0xA68dF33b095c2897123416cbd517ed314E46fF62";
 
-    // Query transactions to/from the factory using Basescan API
-    const data = await fetchWithRetry(
-      `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`
-    );
-
-    if (data.status === "0" && data.message === "NOTOK") {
-      throw new Error(
-        typeof data.result === "string" ? data.result : "API request failed"
-      );
-    }
-
-    if (!data.result || !Array.isArray(data.result)) {
-      return [false];
-    }
+    // Fetch all transactions using getTransactions from smart-wallet.ts
+    const transactions = await getTransactions(address, 8453); // Base chain
 
     // Check if any transactions were interactions with Timeswap Factory
-    const hasProvidedLiquidity = data.result.some(
+    const hasProvidedLiquidity = transactions.some(
       (tx) =>
+        tx.to &&
         tx.to.toLowerCase() === TIMESWAP_FACTORY.toLowerCase() &&
         tx.isError === "0"
     );

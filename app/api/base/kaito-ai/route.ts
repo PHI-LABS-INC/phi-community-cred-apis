@@ -1,6 +1,12 @@
 import { NextRequest } from "next/server";
-import { Address, isAddress } from "viem";
+import { Address, isAddress, createPublicClient, http } from "viem";
+import { base } from "viem/chains";
 import { createSignature } from "@/app/lib/signature";
+
+const client = createPublicClient({
+  chain: base,
+  transport: http(),
+});
 
 export async function GET(req: NextRequest) {
   try {
@@ -54,30 +60,31 @@ async function verifyKaitoToken(address: Address): Promise<boolean> {
     // Define the Kaito token contract address
     const KAITO_CONTRACT = "0x98d0baa52b2D063E780DE12F615f963Fe8537553";
 
-    // Query Base blockchain API for Kaito token balance using balanceOf method
-    const response = await fetch(
-      `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=tokenbalance&contractaddress=${KAITO_CONTRACT}&address=${address}&apikey=${process.env.BASE_SCAN_API_KEY_02}`
-    );
+    // ERC20 balanceOf function ABI
+    const ERC20_ABI = [
+      {
+        constant: true,
+        inputs: [{ name: "account", type: "address" }],
+        name: "balanceOf",
+        outputs: [{ name: "", type: "uint256" }],
+        type: "function",
+      },
+    ] as const;
 
-    const data = await response.json();
-
-    if (
-      !data ||
-      (data.status === "0" &&
-        data.message === "NOTOK" &&
-        data.result === "Missing/Invalid API Key")
-    ) {
-      throw new Error("Missing or invalid API key");
-    }
-
-    if (!data.result) {
-      return false;
-    }
+    // Query Base blockchain for Kaito token balance using viem
+    const balance = await client.readContract({
+      address: KAITO_CONTRACT as Address,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    });
 
     // Determine if the address holds Kaito tokens
-    const balance = parseFloat(data.result) > 0;
-
-    return balance;
+    if (typeof balance === "bigint") {
+      return balance > BigInt(0);
+    } else {
+      throw new Error("Unexpected balance type returned from contract");
+    }
   } catch (error) {
     console.error("Error verifying Kaito token:", error);
     throw new Error("Failed to verify Kaito token ownership");

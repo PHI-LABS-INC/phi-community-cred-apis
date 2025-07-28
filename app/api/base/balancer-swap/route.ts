@@ -1,34 +1,29 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
 const BALANCER_ROUTER_ADDRESSES = [
   "0x3f170631ed9821ca51a59d996ab095162438dc10",
   "0x85a80afee867adf27b50bdb7b76da70f1e853062",
-];
-
-const ETHERSCAN_API = "https://api.etherscan.io/v2/api";
-const API_KEY = process.env.BASE_SCAN_API_KEY_02;
+] as const;
 
 async function hasBalancedSwapped(address: Address): Promise<boolean> {
-  const url = `${ETHERSCAN_API}?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
   try {
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (
-      !data ||
-      (data.status === "0" &&
-        data.message === "NOTOK" &&
-        data.result === "Missing/Invalid API Key")
-    ) {
-      throw new Error("Missing or invalid API key");
+    // Check if address has interacted with any of the Balancer router addresses
+    for (const routerAddress of BALANCER_ROUTER_ADDRESSES) {
+      const hasInteracted = await hasContractInteraction(
+        address,
+        routerAddress as Address,
+        [], // No specific method required
+        1, // At least 1 interaction
+        8453 // Base chain
+      );
+      if (hasInteracted) {
+        return true;
+      }
     }
-    if (!data.result || !Array.isArray(data.result)) return false;
-    // Look for at least one tx to any of the router addresses (case-insensitive)
-    return data.result.some(
-      (tx: { to?: string }) =>
-        tx.to && BALANCER_ROUTER_ADDRESSES.includes(tx.to.toLowerCase())
-    );
+    return false;
   } catch (error) {
     console.error("Error verifying Balancer swap:", {
       error,

@@ -9,6 +9,8 @@ export interface TransactionItem {
   blockNumber: string;
   methodId?: string;
   timeStamp?: string;
+  gasUsed?: string;
+  gasPrice?: string;
   isError?: string;
   input?: string;
 }

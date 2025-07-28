@@ -1,34 +1,18 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { getTransactions } from "@/app/lib/smart-wallet";
 
-const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_01;
-
-// Type definitions for BaseScan API response
-interface BaseScanTransaction {
-  blockHash: string;
-  blockNumber: string;
-  confirmations: string;
-  contractAddress: string;
-  cumulativeGasUsed: string;
-  from: string;
-  gas: string;
-  gasPrice: string;
-  gasUsed: string;
+// Type definitions for transaction data from smart-wallet.ts
+interface TransactionItem {
   hash: string;
-  input: string;
-  isError: string;
-  nonce: string;
-  timeStamp: string;
-  to: string;
-  transactionIndex: string;
-  value: string;
-}
-
-interface BaseScanResponse {
-  status: string;
-  message: string;
-  result: BaseScanTransaction[];
+  from: string;
+  to?: string;
+  value?: string;
+  input?: string;
+  timeStamp?: string;
+  isError?: string;
+  contractAddress?: string;
 }
 
 interface TransactionMetrics {
@@ -130,22 +114,8 @@ async function verifyOnchainScore(
   address: Address
 ): Promise<[boolean, number]> {
   try {
-    if (!BASESCAN_API_KEY) {
-      console.error("Missing required BaseScan API key");
-      return [false, 0];
-    }
-
-    // Fetch transaction history from BaseScan API
-    const apiUrl = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${BASESCAN_API_KEY}`;
-    const response = await fetch(apiUrl);
-    const data = (await response.json()) as BaseScanResponse;
-
-    if (data.status !== "1" || !Array.isArray(data.result)) {
-      console.error("Error fetching transaction data from BaseScan:", data);
-      return [false, 0];
-    }
-
-    const transactions = data.result;
+    // Fetch transaction history using getTransactions from smart-wallet.ts
+    const transactions = await getTransactions(address, 8453); // Base chain
     if (transactions.length === 0) {
       return [false, 0];
     }
@@ -176,7 +146,7 @@ async function verifyOnchainScore(
 }
 
 function calculateTransactionMetrics(
-  transactions: BaseScanTransaction[]
+  transactions: TransactionItem[]
 ): TransactionMetrics {
   const metrics: TransactionMetrics = {
     totalTransactions: transactions.length,
@@ -241,21 +211,21 @@ function calculateTransactionMetrics(
     lastActiveDay = txDate;
 
     // Count transaction types
-    const toAddress = tx.to.toLowerCase();
+    const toAddress = tx.to?.toLowerCase();
     const fromAddress = tx.from.toLowerCase();
-    if (SWAP_ROUTERS.includes(toAddress)) {
+    if (toAddress && SWAP_ROUTERS.includes(toAddress)) {
       metrics.tokenSwaps++;
     }
-    if (BRIDGE_CONTRACTS.includes(toAddress)) {
+    if (toAddress && BRIDGE_CONTRACTS.includes(toAddress)) {
       metrics.bridgeTransactions++;
     }
-    if (LENDING_CONTRACTS.includes(toAddress)) {
+    if (toAddress && LENDING_CONTRACTS.includes(toAddress)) {
       metrics.lendingTransactions++;
     }
-    if (ENS_CONTRACTS.includes(toAddress)) {
+    if (toAddress && ENS_CONTRACTS.includes(toAddress)) {
       metrics.ensInteractions++;
     }
-    if (tx.contractAddress && fromAddress === toAddress) {
+    if (tx.contractAddress && toAddress && fromAddress === toAddress) {
       metrics.contractDeployments++;
     }
   });

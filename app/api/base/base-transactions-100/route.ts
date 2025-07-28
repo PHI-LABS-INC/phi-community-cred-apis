@@ -1,17 +1,13 @@
 import { NextRequest } from "next/server";
-import { Address, isAddress, createPublicClient, http } from "viem";
-import { base } from "viem/chains";
+import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-
-const client = createPublicClient({
-  chain: base,
-  transport: http(),
-});
+import { getTransactions } from "@/app/lib/smart-wallet";
 
 async function verifyTransactionCount(address: Address): Promise<boolean> {
   try {
-    const txCount = await client.getTransactionCount({ address });
-    return txCount >= 100;
+    // Use getTransactions to support both EOAs and smart contract wallets
+    const transactions = await getTransactions(address, 8453); // Base chain
+    return transactions.length >= 100;
   } catch (error) {
     console.error("Error verifying transaction count:", {
       error,

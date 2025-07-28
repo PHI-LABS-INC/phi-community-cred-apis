@@ -1,29 +1,19 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
 const COW_WETH_V3_POOL = "0x9dA18982a33FD0c7051B19F0d7C76F2d5E7e017c";
-const ETHERSCAN_API = "https://api.etherscan.io/v2/api";
-const API_KEY = process.env.BASE_SCAN_API_KEY_02;
-
-type Tx = { to?: string };
 
 async function hasAddedCowWethV3Liquidity(address: Address): Promise<boolean> {
-  const url = `${ETHERSCAN_API}?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
   try {
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (
-      !data ||
-      (data.status === "0" &&
-        data.message === "NOTOK" &&
-        data.result === "Missing/Invalid API Key")
-    ) {
-      throw new Error("Missing or invalid API key");
-    }
-    if (!data.result || !Array.isArray(data.result)) return false;
-    return (data.result as Tx[]).some(
-      (tx) => tx.to?.toLowerCase() === COW_WETH_V3_POOL.toLowerCase()
+    // Use hasContractInteraction to check for at least one interaction with the pool
+    return await hasContractInteraction(
+      address,
+      COW_WETH_V3_POOL as Address,
+      [],
+      1,
+      8453
     );
   } catch (error) {
     console.error("Error verifying Balancer V3 add liquidity:", {

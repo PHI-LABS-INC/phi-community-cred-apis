@@ -7,8 +7,6 @@ import { hasContractInteraction } from "@/app/lib/smart-wallet";
 const CURVE_GAUGE_VOTING =
   "0xEf0D7B6f35D3d3F5D66341A95431d8Cfa8071c8A" as Address;
 
-type Tx = { to?: string };
-
 async function hasVotedGauge(address: Address): Promise<boolean> {
   try {
     return await hasContractInteraction(

@@ -2,6 +2,7 @@ import { Address } from "viem";
 import { isAddress } from "viem";
 import { NextRequest } from "next/server";
 import { createSignature } from "@/app/lib/signature";
+import { getTransactions } from "@/app/lib/smart-wallet";
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
@@ -43,26 +44,12 @@ export async function GET(req: NextRequest) {
 }
 
 async function verifyBaseGasSpent(address: Address): Promise<boolean> {
-  const BASESCAN_API_KEY = process.env.BASE_SCAN_API_KEY_02;
-  if (!BASESCAN_API_KEY) {
-    console.error("Missing BaseScan API key");
-    return false;
-  }
-
-  // Fetch the transaction list from BaseScan for the provided address.
-  // We check if the address has initiated any transaction (i.e., spent gas).
-  const apiUrl = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${BASESCAN_API_KEY}`;
   try {
-    const response = await fetch(apiUrl);
-    const data = await response.json();
-
-    if (!data || data.status !== "1" || !Array.isArray(data.result)) {
-      console.error("Error fetching transaction data from BaseScan:", data);
-      return false;
-    }
+    // Fetch transaction history using getTransactions from smart-wallet.ts
+    const transactions = await getTransactions(address, 8453); // Base chain
 
     // Check if any transaction was initiated by the address
-    return data.result.some((tx: { from: string }) => {
+    return transactions.some((tx) => {
       return tx.from.toLowerCase() === address.toLowerCase();
     });
   } catch (error) {

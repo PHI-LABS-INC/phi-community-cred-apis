@@ -2,79 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Address, isAddress } from "viem";
 import { isWithinInterval } from "date-fns";
 import { createSignature } from "@/app/lib/signature";
-import PQueue from "p-queue";
-
-// Create separate queues for each API key
-const API_KEYS = (process.env.BASE_SCAN_API_KEYS_BATCH || "")
-  .split(",")
-  .filter(Boolean);
-if (API_KEYS.length === 0) {
-  throw new Error("No API keys configured");
-}
-
-// Create a queue for each API key with higher rate limits
-const queues = API_KEYS.map(
-  () => new PQueue({ interval: 1000, intervalCap: 5 })
-); // Reduced to 5 requests per second per API key to be safer
-
-let currentQueueIndex = 0;
-
-async function fetchWithRateLimit(
-  url: string,
-  retries = 5
-): Promise<Record<string, unknown>> {
-  const tryFetch = async (attempt: number) => {
-    const queue = queues[currentQueueIndex];
-    const apiKey = API_KEYS[currentQueueIndex];
-
-    // Round-robin between API keys
-    currentQueueIndex = (currentQueueIndex + 1) % API_KEYS.length;
-
-    try {
-      const fetchWithTimeout = async () => {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-        try {
-          const response = await fetch(
-            url.replace(/apikey=([^&]*)/, `apikey=${apiKey}`),
-            { signal: controller.signal }
-          );
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data = await response.json();
-          clearTimeout(timeout);
-          return data;
-        } catch (error) {
-          clearTimeout(timeout);
-          throw error;
-        }
-      };
-
-      // Execute request with queue to ensure rate limiting
-      return await queue.add(fetchWithTimeout);
-    } catch (error: unknown) {
-      console.warn(
-        `Attempt ${attempt} failed:`,
-        error instanceof Error ? error.message : String(error)
-      );
-
-      if (attempt < retries) {
-        // Exponential backoff with jitter
-        const backoff = Math.min(
-          1000 * Math.pow(2, attempt) + Math.random() * 1000,
-          10000
-        );
-        await new Promise((resolve) => setTimeout(resolve, backoff));
-        return tryFetch(attempt + 1);
-      }
-      throw error;
-    }
-  };
-
-  return tryFetch(1);
-}
+import { getTransactions } from "@/app/lib/smart-wallet";
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
@@ -92,8 +20,8 @@ export async function GET(req: NextRequest) {
     if (addresses) {
       const additionalAddresses = addresses
         .split(",")
-        .map((addr) => addr.trim())
-        .filter((addr) => isAddress(addr)) as Address[];
+        .map((addr: string) => addr.trim())
+        .filter((addr: string) => isAddress(addr)) as Address[];
       addressesToCheck.push(...additionalAddresses);
     }
     let mint_eligibility = false;
@@ -142,34 +70,11 @@ export async function GET(req: NextRequest) {
  */
 async function verifyTransaction(address: Address): Promise<[boolean, string]> {
   try {
-    // Fetch transaction history from Basescan API using optimized rate limiter
-    const data = await fetchWithRateLimit(
-      `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${API_KEYS[0]}`
-    );
-
-    // Check for API errors
-    if (data.status === "0" && data.message === "NOTOK") {
-      if (data.result === "Missing/Invalid API Key") {
-        throw new Error("Missing or invalid API key");
-      }
-      if (
-        typeof data.result === "string" &&
-        data.result.includes("Max rate limit reached")
-      ) {
-        // Will trigger retry with different API key
-        throw new Error("Rate limit reached");
-      }
-      throw new Error(
-        typeof data.result === "string" ? data.result : "API request failed"
-      );
-    }
+    // Fetch transaction history using getTransactions from smart-wallet.ts
+    const transactions = await getTransactions(address, 8453); // Base chain
 
     // Return default values if no transaction data
-    if (
-      !data.result ||
-      !Array.isArray(data.result) ||
-      data.result.length === 0
-    ) {
+    if (transactions.length === 0) {
       return [false, "0"];
     }
 
@@ -181,7 +86,8 @@ async function verifyTransaction(address: Address): Promise<[boolean, string]> {
 
     // Optimize transaction counting with early return
     let januaryTxCount = 0;
-    for (const tx of data.result) {
+    for (const tx of transactions) {
+      if (!tx.timeStamp) continue;
       const txDate = new Date(parseInt(tx.timeStamp) * 1000);
       if (isWithinInterval(txDate, targetInterval)) {
         januaryTxCount++;

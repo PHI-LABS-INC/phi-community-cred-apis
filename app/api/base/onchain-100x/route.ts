@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Address, isAddress, createPublicClient, http } from "viem";
-import { base } from "viem/chains";
+import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { getTransactions } from "@/app/lib/smart-wallet";
 
-const client = createPublicClient({
-  chain: base,
-  transport: http(),
-});
-
-async function verifyTransactionCount(address: Address): Promise<boolean> {
+async function verifyTransactionCount(
+  address: Address
+): Promise<[boolean, string]> {
   try {
-    const txCount = await client.getTransactionCount({ address });
-    return txCount >= 100;
+    // Use getTransactions to support both EOAs and smart contract wallets
+    const transactions = await getTransactions(address, 8453); // Base chain
+    return [transactions.length >= 100, transactions.length.toString()];
   } catch (error) {
     console.error("Error verifying transaction count:", {
       error,
@@ -42,8 +40,8 @@ export async function GET(req: NextRequest) {
     if (addresses) {
       const additionalAddresses = addresses
         .split(",")
-        .map((addr) => addr.trim())
-        .filter((addr) => isAddress(addr)) as Address[];
+        .map((addr: string) => addr.trim())
+        .filter((addr: string) => isAddress(addr)) as Address[];
       addressesToCheck.push(...additionalAddresses);
     }
 
@@ -52,11 +50,10 @@ export async function GET(req: NextRequest) {
 
     for (const addr of addressesToCheck) {
       try {
-        const eligible = await verifyTransactionCount(addr);
+        const [eligible, txCount] = await verifyTransactionCount(addr);
         if (eligible) {
           mint_eligibility = true;
-          const txCount = await client.getTransactionCount({ address: addr });
-          data = txCount.toString();
+          data = txCount;
           break; // Found eligible address, no need to check others
         }
       } catch (error) {

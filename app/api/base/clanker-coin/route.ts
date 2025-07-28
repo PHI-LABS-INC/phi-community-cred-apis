@@ -1,6 +1,18 @@
 import { NextRequest } from "next/server";
-import { Address, isAddress, formatUnits } from "viem";
+import {
+  Address,
+  isAddress,
+  formatUnits,
+  createPublicClient,
+  http,
+} from "viem";
+import { base } from "viem/chains";
 import { createSignature } from "@/app/lib/signature";
+
+const client = createPublicClient({
+  chain: base,
+  transport: http(),
+});
 
 export async function GET(req: NextRequest) {
   try {
@@ -54,31 +66,30 @@ async function verifyClankerCoin(address: Address): Promise<[boolean, string]> {
     // Define the Clanker coin contract address
     const CLANKER_CONTRACT = "0x1bc0c42215582d5A085795f4baDbaC3ff36d1Bcb";
 
-    // Query Base blockchain API for Clanker coin balance using balanceOf method
-    const response = await fetch(
-      `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=tokenbalance&contractaddress=${CLANKER_CONTRACT}&address=${address}&apikey=${process.env.BASE_SCAN_API_KEY}`
-    );
+    // ERC20 balanceOf function ABI
+    const ERC20_ABI = [
+      {
+        constant: true,
+        inputs: [{ name: "account", type: "address" }],
+        name: "balanceOf",
+        outputs: [{ name: "", type: "uint256" }],
+        type: "function",
+      },
+    ] as const;
 
-    const data = await response.json();
-
-    if (
-      !data ||
-      (data.status === "0" &&
-        data.message === "NOTOK" &&
-        data.result === "Missing/Invalid API Key")
-    ) {
-      throw new Error("Missing or invalid API key");
-    }
-
-    if (!data.result) {
-      return [false, "0"];
-    }
+    // Query Base blockchain for Clanker coin balance using viem
+    const balance = (await client.readContract({
+      address: CLANKER_CONTRACT as Address,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    })) as bigint;
 
     // Use viem's formatUnits to safely handle the balance
-    const balance = formatUnits(BigInt(data.result), 18);
-    const isEligible = parseFloat(balance) > 0;
+    const balanceFormatted = formatUnits(balance, 18);
+    const isEligible = balance > BigInt(0);
 
-    return [isEligible, balance];
+    return [isEligible, balanceFormatted];
   } catch (error) {
     console.error("Error verifying Clanker coin:", error);
     throw new Error("Failed to verify Clanker coin ownership");
