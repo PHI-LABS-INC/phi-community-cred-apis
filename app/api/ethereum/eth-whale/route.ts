@@ -1,32 +1,22 @@
 import { NextRequest } from "next/server";
-import { Address, isAddress } from "viem";
+import { Address, isAddress, createPublicClient, http } from "viem";
+import { mainnet } from "viem/chains";
 import { createSignature } from "@/app/lib/signature";
+
+// Create public client for Ethereum mainnet
+const client = createPublicClient({
+  chain: mainnet,
+  transport: http(),
+});
 
 async function verifyEthWhale(address: Address): Promise<boolean> {
   try {
-    const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+    // Use viem to get the ETH balance
+    const balanceInWei = await client.getBalance({ address });
+    const balanceInEth = Number(balanceInWei) / 1e18;
 
-    if (!ETHERSCAN_API_KEY) {
-      console.error("Missing Etherscan API key");
-      return false;
-    }
-
-    // Use Etherscan API to get the ETH balance
-    const apiUrl = `https://api.etherscan.io/api?module=account&action=balance&address=${address}&tag=latest&apikey=${ETHERSCAN_API_KEY}`;
-
-    const response = await fetch(apiUrl);
-    const data = await response.json();
-
-    if (data.status === "1" && data.result) {
-      // Balance is returned in wei, convert to ETH
-      const balanceInWei = BigInt(data.result);
-      const balanceInEth = Number(balanceInWei) / 1e18;
-
-      // Check if balance is at least 10 ETH
-      return balanceInEth >= 10;
-    }
-
-    return false;
+    // Check if balance is at least 10 ETH
+    return balanceInEth >= 10;
   } catch (error) {
     console.error("Error verifying ETH whale:", {
       error,

@@ -254,8 +254,8 @@ export async function GET(req: NextRequest) {
     if (addresses) {
       const additionalAddresses = addresses
         .split(",")
-        .map((addr) => addr.trim())
-        .filter((addr) => isAddress(addr)) as Address[];
+        .map((addr: string) => addr.trim())
+        .filter((addr: string) => isAddress(addr)) as Address[];
       addressesToCheck.push(...additionalAddresses);
     }
 

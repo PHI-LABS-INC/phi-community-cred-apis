@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
 export async function GET(req: NextRequest) {
   try {
@@ -44,8 +45,8 @@ export async function GET(req: NextRequest) {
 /**
  * Verifies if the given address has cast a vote in the Nounce DAO.
  *
- * This function uses the Etherscan API to fetch the transaction history
- * of the provided address and checks if any transaction was made to the target contract's castVote function.
+ * This function uses hasContractInteraction to check if any transaction was made
+ * to the target contract's castVote function.
  *
  * @param address - Ethereum address to check
  * @returns Boolean indicating if the address has cast a vote
@@ -53,31 +54,8 @@ export async function GET(req: NextRequest) {
  */
 async function verifyNounceDaoVote(address: Address): Promise<boolean> {
   try {
-    const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
-    if (!ETHERSCAN_API_KEY) {
-      throw new Error("Missing Etherscan API key");
-    }
-
-    // Fetch the transaction list for the given address using Etherscan API
-    const url = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${address.toLowerCase()}&startblock=0&endblock=latest&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (!Array.isArray(data.result)) {
-      console.error("Etherscan API error: result is not an array", data);
-      throw new Error("Failed to fetch transactions from Etherscan");
-    }
-
-    // If no transactions are found (Etherscan returns status "0" with an empty result), treat it as a valid case.
-    if (
-      data.status !== "1" &&
-      !(data.status === "0" && data.result.length === 0)
-    ) {
-      console.error("Etherscan API error:", data);
-      throw new Error("Failed to fetch transactions from Etherscan");
-    }
-
-    const targetContractAddress = "0x6f3e6272a167e8accb32072d08e0957f9c79223d";
+    const targetContractAddress =
+      "0x6f3e6272a167e8accb32072d08e0957f9c79223d" as Address;
     const castVoteFunctionSignatures = [
       "0x7b3c71d3", // castVoteWithReason
       "0x3bccf4fd", // castVoteBySig
@@ -89,21 +67,15 @@ async function verifyNounceDaoVote(address: Address): Promise<boolean> {
     ];
 
     // Check if any transaction to the target contract's castVote function occurred
-    const hasCastVote = data.result.some(
-      (tx: { to: string; input: string }) => {
-        return (
-          tx.to &&
-          tx.to.toLowerCase() === targetContractAddress &&
-          castVoteFunctionSignatures.some((signature) =>
-            tx.input.startsWith(signature)
-          )
-        );
-      }
+    return await hasContractInteraction(
+      address,
+      targetContractAddress,
+      castVoteFunctionSignatures,
+      1, // At least 1 interaction
+      1 // Ethereum mainnet
     );
-
-    return hasCastVote;
   } catch (error) {
-    console.error("Error verifying Nounce DAO vote via Etherscan:", error);
+    console.error("Error verifying Nounce DAO vote:", error);
     throw new Error("Failed to verify Nounce DAO vote");
   }
 }

@@ -1,32 +1,20 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
-const CURVE_ROUTER_V1_2 = "0x45312ea0eff7e09c83cbe249fa1d7598c4c8cd4e";
-const ETHERSCAN_API = "https://api.etherscan.io/api";
-const API_KEY = process.env.ETHERSCAN_API_KEY;
-
-type Tx = { to?: string };
+const CURVE_ROUTER_V1_2 =
+  "0x45312ea0eff7e09c83cbe249fa1d7598c4c8cd4e" as Address;
 
 async function hasUsedCurveSwap10x(address: Address): Promise<boolean> {
-  const url = `${ETHERSCAN_API}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
-
   try {
-    const resp = await fetch(url);
-    const data = await resp.json();
-
-    if (!data || data.status === "0") {
-      return false;
-    }
-
-    if (!data.result || !Array.isArray(data.result)) return false;
-
-    // Count transactions to the CurveRouter v1.2
-    const curveSwapCount = (data.result as Tx[]).filter(
-      (tx) => tx.to?.toLowerCase() === CURVE_ROUTER_V1_2.toLowerCase()
-    ).length;
-
-    return curveSwapCount >= 10;
+    return await hasContractInteraction(
+      address,
+      CURVE_ROUTER_V1_2,
+      [], // No specific method IDs required
+      10, // At least 10 interactions
+      1 // Ethereum mainnet
+    );
   } catch (error) {
     console.error("Error verifying Curve swap 10x:", {
       error,

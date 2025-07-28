@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
 export async function GET(req: NextRequest) {
   try {
@@ -49,47 +50,20 @@ export async function GET(req: NextRequest) {
  */
 async function verifyArtBlocksPurchaser(address: Address): Promise<boolean> {
   try {
-    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-    if (!etherscanApiKey) {
-      console.error("ETHERSCAN_API_KEY not found");
-      return false;
-    }
-
     // ArtBlocks main contract address
-    const artBlocksContract = "0xa7d8d9ef8D8Ce8992Df33D8b8CF4Aebabd5bD270";
+    const artBlocksContract =
+      "0xa7d8d9ef8D8Ce8992Df33D8b8CF4Aebabd5bD270" as Address;
 
     console.log(`Checking if ${address} has purchased art on ArtBlocks`);
 
-    // Get all transactions from this address
-    const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=latest&sort=desc&apikey=${etherscanApiKey}`;
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error("Failed to fetch from Etherscan:", response.statusText);
-      return false;
-    }
-
-    const data = await response.json();
-
-    if (data.status === "1" && Array.isArray(data.result)) {
-      // Filter transactions to ArtBlocks contract with value > 0 (purchases)
-      const purchaseTransactions = data.result.filter(
-        (tx: { to?: string; value: string; isError: string }) =>
-          tx.to?.toLowerCase() === artBlocksContract.toLowerCase() &&
-          parseInt(tx.value) > 0 && // Transaction has value (payment)
-          tx.isError === "0" // Only successful transactions
-      );
-
-      if (purchaseTransactions.length > 0) {
-        console.log(
-          `Found ${purchaseTransactions.length} ArtBlocks purchase transactions for address ${address}`
-        );
-        return true;
-      }
-    }
-
-    console.log(`No ArtBlocks purchases found for address ${address}`);
-    return false;
+    // Check if any transaction to ArtBlocks contract occurred
+    return await hasContractInteraction(
+      address,
+      artBlocksContract,
+      [], // No specific method IDs required
+      1, // At least 1 interaction
+      1 // Ethereum mainnet
+    );
   } catch (error) {
     console.error("Error verifying ArtBlocks purchaser status:", error);
     return false;

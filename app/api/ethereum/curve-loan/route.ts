@@ -1,32 +1,20 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
-const ETHERSCAN_API = "https://api.etherscan.io/api";
-const CREATE_LOAN_CONTRACT = "0xEdA215b7666936DEd834f76f3fBC6F323295110A";
+const CREATE_LOAN_CONTRACT =
+  "0xEdA215b7666936DEd834f76f3fBC6F323295110A" as Address;
 const CREATE_LOAN_METHOD = "0x23cfed03";
-const API_KEY = process.env.ETHERSCAN_API_KEY;
-
-type Tx = { to?: string; methodId?: string };
 
 async function hasCreatedCurveLoan(address: Address): Promise<boolean> {
-  const url = `${ETHERSCAN_API}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
-
   try {
-    const resp = await fetch(url);
-    const data = await resp.json();
-
-    if (!data || data.status === "0") {
-      return false;
-    }
-
-    if (!data.result || !Array.isArray(data.result)) return false;
-
-    // Look for transactions to Curve loan contract
-    return (data.result as Tx[]).some(
-      (tx) =>
-        tx.to?.toLowerCase() === CREATE_LOAN_CONTRACT.toLowerCase() &&
-        tx.methodId?.toLowerCase() === CREATE_LOAN_METHOD.toLowerCase()
+    return await hasContractInteraction(
+      address,
+      CREATE_LOAN_CONTRACT,
+      [CREATE_LOAN_METHOD], // Specific method ID for creating loans
+      1, // At least 1 interaction
+      1 // Ethereum mainnet
     );
   } catch (error) {
     console.error("Error verifying Curve loan:", {

@@ -1,18 +1,11 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { getTransactions } from "@/app/lib/smart-wallet";
 
 // Gitcoin Grants contract address
-const GITCOIN_GRANTS_CONTRACT = "0xdf869FAD6dB91f437B59F1EdEFab319493D4C4cE";
-
-// Type for Etherscan transaction response
-interface EtherscanTransaction {
-  to?: string;
-  from?: string;
-  hash: string;
-  value: string;
-  blockNumber: string;
-}
+const GITCOIN_GRANTS_CONTRACT =
+  "0xdf869FAD6dB91f437B59F1EdEFab319493D4C4cE" as Address;
 
 export async function GET(req: NextRequest) {
   try {
@@ -76,7 +69,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * Verifies if an address has contributed to Gitcoin Grants
- * Checks transaction history with the Gitcoin Grants contract using Etherscan API
+ * Checks transaction history with the Gitcoin Grants contract using hasContractInteraction
  *
  * @param address - Ethereum address to check
  * @returns Tuple containing [boolean eligibility status, string transaction count]
@@ -86,29 +79,13 @@ async function verifyGitcoinContributor(
   address: Address
 ): Promise<[boolean, string]> {
   try {
-    // Check for transactions with Gitcoin Grants contract using Etherscan API
-    const response = await fetch(
-      `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey=${process.env.ETHERSCAN_API_KEY}`
+    // Use getTransactions to count all interactions with the Gitcoin Grants contract
+    const txs = await getTransactions(address, 1); // Ethereum mainnet
+    const gitcoinTransactions = txs.filter(
+      (tx) => tx.to?.toLowerCase() === GITCOIN_GRANTS_CONTRACT.toLowerCase()
     );
-
-    const data = await response.json();
-
-    if (!response.ok || data.status !== "1") {
-      console.error("Etherscan API error:", data);
-      return [false, "0"];
-    }
-
-    // Filter transactions that interact with Gitcoin Grants contract
-    const gitcoinTransactions = data.result.filter(
-      (tx: EtherscanTransaction) =>
-        tx.to?.toLowerCase() === GITCOIN_GRANTS_CONTRACT.toLowerCase() ||
-        (tx.from?.toLowerCase() === address.toLowerCase() &&
-          tx.to?.toLowerCase() === GITCOIN_GRANTS_CONTRACT.toLowerCase())
-    );
-
     const contributionCount = gitcoinTransactions.length;
     const isEligible = contributionCount > 0;
-
     return [isEligible, contributionCount.toString()];
   } catch (error) {
     console.error("Error verifying Gitcoin contributions:", error);

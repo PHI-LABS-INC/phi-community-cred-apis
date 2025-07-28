@@ -1,31 +1,22 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-
-const ETHERSCAN_API = "https://api.etherscan.io/api";
-const API_KEY = process.env.ETHERSCAN_API_KEY;
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
 // Curve gauge voting contract
-const CURVE_GAUGE_VOTING = "0xEf0D7B6f35D3d3F5D66341A95431d8Cfa8071c8A";
+const CURVE_GAUGE_VOTING =
+  "0xEf0D7B6f35D3d3F5D66341A95431d8Cfa8071c8A" as Address;
 
 type Tx = { to?: string };
 
 async function hasVotedGauge(address: Address): Promise<boolean> {
-  const url = `${ETHERSCAN_API}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
-
   try {
-    const resp = await fetch(url);
-    const data = await resp.json();
-
-    if (!data || data.status === "0") {
-      throw new Error("Failed to fetch transaction data");
-    }
-
-    if (!data.result || !Array.isArray(data.result)) return false;
-
-    // Look for transactions to the Curve gauge voting contract
-    return (data.result as Tx[]).some(
-      (tx) => tx.to?.toLowerCase() === CURVE_GAUGE_VOTING.toLowerCase()
+    return await hasContractInteraction(
+      address,
+      CURVE_GAUGE_VOTING,
+      [], // No specific method IDs required
+      1, // At least 1 interaction
+      1 // Ethereum mainnet
     );
   } catch (error) {
     console.error("Error verifying Curve gauge vote:", {

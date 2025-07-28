@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
 export async function GET(req: NextRequest) {
   try {
@@ -49,51 +50,25 @@ export async function GET(req: NextRequest) {
  */
 async function verifyNounsAuctionBidder(address: Address): Promise<boolean> {
   try {
-    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-    if (!etherscanApiKey) {
-      console.error("ETHERSCAN_API_KEY not found");
-      return false;
-    }
-
     // Nouns Auction House contract address
-    const nounsAuctionHouse = "0x830BD73E4184ceF73443C15111a1DF14e495C706";
+    const nounsAuctionHouse =
+      "0x830BD73E4184ceF73443C15111a1DF14e495C706" as Address;
 
     // createBid method signature: createBid(uint256 nounId,uint32 clientId)
     const createBidMethodId = "0xabbfb786";
-
-    // Get all transactions from this address to the auction house
-    const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=12985438&endblock=latest&sort=desc&apikey=${etherscanApiKey}`;
 
     console.log(
       `Checking if ${address} has called createBid on Nouns auction house`
     );
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error("Failed to fetch from Etherscan:", response.statusText);
-      return false;
-    }
-
-    const data = await response.json();
-
-    if (data.status === "1" && Array.isArray(data.result)) {
-      // Filter transactions to the auction house that call createBid method
-      const bidTransactions = data.result.filter(
-        (tx: { to?: string; input?: string; isError: string }) =>
-          tx.to?.toLowerCase() === nounsAuctionHouse.toLowerCase() &&
-          tx.input?.startsWith(createBidMethodId) &&
-          tx.isError === "0" // Only successful transactions
-      );
-
-      const bidCount = bidTransactions.length;
-      console.log(
-        `Found ${bidCount} createBid transactions for address ${address}`
-      );
-      return bidCount > 0;
-    } else {
-      console.log(`No createBid transactions found for address ${address}`);
-      return false;
-    }
+    // Check if any transaction to the auction house that calls createBid method
+    return await hasContractInteraction(
+      address,
+      nounsAuctionHouse,
+      [createBidMethodId], // Specific method ID for creating bids
+      1, // At least 1 interaction
+      1 // Ethereum mainnet
+    );
   } catch (error) {
     console.error("Error verifying Nouns auction bidder status:", error);
     return false;

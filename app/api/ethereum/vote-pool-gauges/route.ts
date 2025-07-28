@@ -1,44 +1,21 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
 // Ethereum mainnet Pool Gauges contract
-const POOL_GAUGES_CONTRACT = "0xC128468b7Ce63eA702C1f104D55A2566b13D3ABD";
+const POOL_GAUGES_CONTRACT =
+  "0xC128468b7Ce63eA702C1f104D55A2566b13D3ABD" as Address;
 const VOTE_METHOD = ["0x2e4e99a1", "0xd7136328"];
 
-const ETHERSCAN_API = "https://api.etherscan.io/api";
-const API_KEY = process.env.ETHERSCAN_API_KEY;
-
-type Tx = { to?: string; methodId?: string };
-
 async function hasVotedOnPoolGauges(address: Address): Promise<boolean> {
-  if (!API_KEY) {
-    throw new Error("Missing ETHERSCAN API key");
-  }
-  const url = `${ETHERSCAN_API}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      throw new Error(
-        `Etherscan API request failed with status ${resp.status}`
-      );
-    }
-    const data = await resp.json();
-    if (
-      !data ||
-      (data.status === "0" &&
-        data.message === "NOTOK" &&
-        data.result === "Missing/Invalid API Key")
-    ) {
-      throw new Error("Missing or invalid API key");
-    }
-    if (!data.result || !Array.isArray(data.result)) return false;
-    return (data.result as Tx[]).some(
-      (tx) =>
-        tx.to?.toLowerCase() === POOL_GAUGES_CONTRACT.toLowerCase() &&
-        VOTE_METHOD.some(
-          (method) => tx.methodId?.toLowerCase() === method.toLowerCase()
-        )
+    return await hasContractInteraction(
+      address,
+      POOL_GAUGES_CONTRACT,
+      VOTE_METHOD, // Specific method IDs for voting
+      1, // At least 1 interaction
+      1 // Ethereum mainnet
     );
   } catch (error) {
     console.error("Error verifying pool gauge vote:", {
@@ -62,15 +39,6 @@ export async function GET(req: NextRequest) {
         JSON.stringify({ error: "Invalid address provided" }),
         {
           status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-    if (!API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "ETHERSCAN API key not configured" }),
-        {
-          status: 500,
           headers: { "Content-Type": "application/json" },
         }
       );

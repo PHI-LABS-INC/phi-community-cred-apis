@@ -1,31 +1,24 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
+import { getTransactions } from "@/app/lib/smart-wallet";
 
 // Major Superchain networks (OP Stack chains) from the supported chain list - Using 4 mainnet networks only
 const SUPERCHAIN_NETWORKS = {
   optimism: {
     name: "OP Mainnet",
-    apiUrl: "https://api.etherscan.io/v2/api",
-    apiKey: process.env.ETHERSCAN_API_KEY,
     chainId: 10,
   },
   base: {
     name: "Base Mainnet",
-    apiUrl: "https://api.etherscan.io/v2/api",
-    apiKey: process.env.ETHERSCAN_API_KEY,
     chainId: 8453,
   },
   world: {
     name: "World Mainnet",
-    apiUrl: "https://api.etherscan.io/v2/api",
-    apiKey: process.env.ETHERSCAN_API_KEY,
     chainId: 480,
   },
   unichain: {
     name: "Unichain Mainnet",
-    apiUrl: "https://api.etherscan.io/v2/api",
-    apiKey: process.env.ETHERSCAN_API_KEY,
     chainId: 130,
   },
 } as const;
@@ -40,34 +33,14 @@ interface NetworkTransaction {
 async function fetchNetworkTransactions(
   address: Address,
   network: string,
-  apiUrl: string,
-  apiKey?: string,
-  chainId?: number
+  chainId: number
 ): Promise<NetworkTransaction> {
   try {
-    // Use V2 API format with chainid parameter
-    const url = apiKey
-      ? `${apiUrl}?chainid=${chainId}&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&sort=asc&apikey=${apiKey}`
-      : `${apiUrl}?chainid=${chainId}&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&sort=asc`;
+    // Use getTransactions from smart-wallet.ts
+    const transactions = await getTransactions(address, chainId);
 
-    const response = await fetch(url);
-    const data = await response.json();
-
-    let hasTransactions = false;
-    let transactionCount = 0;
-
-    if (data.status === "1" && Array.isArray(data.result)) {
-      hasTransactions = data.result.length > 0;
-      transactionCount = data.result.length;
-    } else if (
-      data.status === "0" &&
-      data.message === "No transactions found"
-    ) {
-      hasTransactions = false;
-      transactionCount = 0;
-    } else {
-      throw new Error(`API error: ${data.message || "Unknown error"}`);
-    }
+    const hasTransactions = transactions.length > 0;
+    const transactionCount = transactions.length;
 
     return {
       network,
@@ -144,13 +117,7 @@ async function verifyL2Voyager(address: Address): Promise<boolean> {
 
     const networkPromises = Object.entries(SUPERCHAIN_NETWORKS).map(
       ([, config]) =>
-        fetchNetworkTransactions(
-          address,
-          config.name,
-          config.apiUrl,
-          config.apiKey,
-          config.chainId
-        )
+        fetchNetworkTransactions(address, config.name, config.chainId)
     );
 
     const networkResults = await Promise.all(networkPromises);

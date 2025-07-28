@@ -1,65 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-import PQueue from "p-queue";
-
-// Create queue for API key
-const API_KEY = process.env.ETHERSCAN_API_KEY;
-if (!API_KEY) {
-  throw new Error("No API key configured");
-}
-
-// Create a queue with rate limits
-const queue = new PQueue({ interval: 1000, intervalCap: 5 });
-
-async function fetchWithRateLimit(
-  url: string,
-  retries = 5
-): Promise<Record<string, unknown>> {
-  const tryFetch = async (attempt: number) => {
-    try {
-      const fetchWithTimeout = async () => {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
-
-        try {
-          const response = await fetch(
-            url.replace(/apikey=([^&]*)/, `apikey=${API_KEY}`),
-            { signal: controller.signal }
-          );
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data = await response.json();
-          clearTimeout(timeout);
-          return data;
-        } catch (error) {
-          clearTimeout(timeout);
-          throw error;
-        }
-      };
-
-      return await queue.add(fetchWithTimeout);
-    } catch (error: unknown) {
-      console.warn(
-        `Attempt ${attempt} failed:`,
-        error instanceof Error ? error.message : String(error)
-      );
-
-      if (attempt < retries) {
-        const backoff = Math.min(
-          1000 * Math.pow(2, attempt) + Math.random() * 1000,
-          10000
-        );
-        await new Promise((resolve) => setTimeout(resolve, backoff));
-        return tryFetch(attempt + 1);
-      }
-      throw error;
-    }
-  };
-
-  return tryFetch(1);
-}
+import { getTransactions } from "@/app/lib/smart-wallet";
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
@@ -113,36 +55,15 @@ export async function GET(req: NextRequest) {
  */
 async function verifyTransaction(address: Address): Promise<[boolean, string]> {
   try {
-    const data = await fetchWithRateLimit(
-      `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${API_KEY}`
-    );
+    const transactions = await getTransactions(address, 1); // Ethereum mainnet
 
-    if (data.status === "0" && data.message === "NOTOK") {
-      if (data.result === "Missing/Invalid API Key") {
-        throw new Error("Missing or invalid API key");
-      }
-      if (
-        typeof data.result === "string" &&
-        data.result.includes("Max rate limit reached")
-      ) {
-        throw new Error("Rate limit reached");
-      }
-      throw new Error(
-        typeof data.result === "string" ? data.result : "API request failed"
-      );
-    }
-
-    if (
-      !data.result ||
-      !Array.isArray(data.result) ||
-      data.result.length === 0
-    ) {
+    if (!transactions || transactions.length === 0) {
       return [false, "No transactions found"];
     }
 
-    // Get the first transaction's timestamp
-    const firstTx = data.result[0];
-    const firstTxDate = new Date(parseInt(firstTx.timeStamp) * 1000);
+    // Get the first transaction's timestamp (transactions are sorted by desc, so get the last one)
+    const firstTx = transactions[transactions.length - 1];
+    const firstTxDate = new Date(parseInt(firstTx.timeStamp || "0") * 1000);
 
     return [true, firstTxDate.toISOString()];
   } catch (error) {
