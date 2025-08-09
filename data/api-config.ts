@@ -1,6 +1,34 @@
 export const endpoints = [
   {
     method: "GET",
+    path: "/api/ethereum/zora-coined-it",
+    id: "verifyzoracoineddit",
+    description:
+      "Verifies if an Ethereum address has launched their Creator Coin on Zora and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/supporting-creators",
+    id: "verifysupportingcreators",
+    description:
+      "Verifies if an Ethereum address has collected 10+ Creator Coins on Zora, supporting the creator economy, and returns eligibility status with collected count and cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/creator-economy-og",
+    id: "verifycreatoreconomyog",
+    description:
+      "Verifies if an Ethereum address was among the first 1,000 users to launch a Creator Coin on Zora and returns eligibility status with launch rank and cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/community-backed",
+    id: "verifycommunitybacked",
+    description:
+      "Verifies if an Ethereum address has a Creator Coin with over 20 holders on Zora, demonstrating community backing, and returns eligibility status with holder metrics and cryptographic signature",
+  },
+  {
+    method: "GET",
     path: "/api/base/balancer-swap",
     id: "verifybalancerswap",
     description:
