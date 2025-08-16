@@ -23,10 +23,13 @@ const ERC20_ABI = [
   },
 ];
 
-async function hasAaveRethSupply(address: Address): Promise<{
-  mint_eligibility: boolean;
-  balance: string;
-}> {
+/**
+ * Verifies if an address has Aave rETH supply
+ *
+ * @param address - Ethereum address to check
+ * @returns Boolean indicating if address has Aave rETH supply
+ */
+async function hasAaveRethSupply(address: Address): Promise<boolean> {
   try {
     const balance = (await client.readContract({
       address: AETH_RETH_TOKEN,
@@ -35,16 +38,10 @@ async function hasAaveRethSupply(address: Address): Promise<{
       args: [address],
     })) as bigint;
 
-    const mint_eligibility = balance > BigInt(0);
-    const balanceInEth = Number(balance) / Math.pow(10, 18); // aEthrETH has 18 decimals
-
-    return {
-      mint_eligibility,
-      balance: balanceInEth.toFixed(6),
-    };
+    return balance > BigInt(0);
   } catch (error) {
     console.error("Error verifying Aave rETH supply:", error);
-    throw new Error("Failed to verify Aave rETH supply");
+    return false;
   }
 }
 
@@ -63,44 +60,23 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification result
-    const result = await hasAaveRethSupply(address as Address);
+    const mint_eligibility = await hasAaveRethSupply(address as Address);
 
     // Generate cryptographic signature of the verification result
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: result.mint_eligibility,
+      mint_eligibility,
     });
 
-    return new Response(
-      JSON.stringify({
-        mint_eligibility: result.mint_eligibility,
-        data: result.balance,
-        signature,
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      }
-    );
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Error in handler:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
-    return new Response(
-      JSON.stringify({
-        error: "Internal server error",
-        details: errorMessage,
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      }
-    );
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

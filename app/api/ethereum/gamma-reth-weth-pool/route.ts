@@ -1,27 +1,58 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-import { hasContractInteraction } from "@/app/lib/smart-wallet";
+import { createPublicClient, http } from "viem";
+import { mainnet } from "viem/chains";
 
-// Gamma Vault contract for rETH/WETH pool
-const GAMMA_RETH_WETH_VAULT =
-  "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8" as Address;
+const client = createPublicClient({
+  chain: mainnet,
+  transport: http(),
+});
 
-// Method ID for deposit function
-const DEPOSIT_METHOD_ID = "0x6e553f65";
+// Token contract addresses
+const RETH_TOKEN = "0xae78736cd615f374d3085123a210448e74fc6393" as Address; // rETH
+const WETH_TOKEN = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2" as Address; // WETH
 
-async function hasGammaRethWethPosition(address: Address): Promise<boolean> {
+// ERC20 ABI for balanceOf
+const ERC20_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+];
+
+/**
+ * Verifies if an address has both rETH and WETH tokens
+ *
+ * @param address - Ethereum address to check
+ * @returns Boolean indicating if address has both rETH and WETH tokens
+ */
+async function hasRethAndWeth(address: Address): Promise<boolean> {
   try {
-    return await hasContractInteraction(
-      address,
-      GAMMA_RETH_WETH_VAULT,
-      [DEPOSIT_METHOD_ID],
-      1,
-      1
-    );
+    // Check rETH balance
+    const rethBalance = (await client.readContract({
+      address: RETH_TOKEN,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    })) as bigint;
+
+    // Check WETH balance
+    const wethBalance = (await client.readContract({
+      address: WETH_TOKEN,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    })) as bigint;
+
+    // User must have both rETH and WETH tokens
+    return rethBalance > BigInt(0) && wethBalance > BigInt(0);
   } catch (error) {
-    console.error("Error verifying Gamma rETH/WETH position:", error);
-    throw new Error("Failed to verify Gamma rETH/WETH position");
+    console.error("Error verifying rETH and WETH balances:", error);
+    return false;
   }
 }
 
@@ -32,11 +63,17 @@ export async function GET(req: NextRequest) {
     if (!address || !isAddress(address)) {
       return new Response(
         JSON.stringify({ error: "Invalid address provided" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
       );
     }
 
-    const mint_eligibility = await hasGammaRethWethPosition(address as Address);
+    // Get verification result
+    const mint_eligibility = await hasRethAndWeth(address as Address);
+
+    // Generate cryptographic signature of the verification result
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,

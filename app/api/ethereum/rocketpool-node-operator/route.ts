@@ -7,24 +7,29 @@ import { hasContractInteraction } from "@/app/lib/smart-wallet";
 const ROCKET_POOL_NODE_MANAGER =
   "0x1d8f8f00cfa6758d7be78336684788fb0ee0fa46" as Address;
 
-// Method IDs for node operator functions
-const SET_WITHDRAWAL_ADDRESS_METHOD_ID = "0x3d18b912"; // setWithdrawalAddress
-const REGISTER_NODE_METHOD_ID = "0x4a25d94a"; // registerNode
-
+/**
+ * Verifies if an address has interacted with Rocket Pool Node Manager
+ *
+ * @param address - Ethereum address to check
+ * @returns Boolean indicating if address has interacted with Rocket Pool Node Manager
+ */
 async function isRocketPoolNodeOperator(address: Address): Promise<boolean> {
   try {
     // Check if the address has interacted with Rocket Pool Node Manager
-    // using either setWithdrawalAddress or registerNode methods
+    // without checking for specific method IDs
     return await hasContractInteraction(
       address,
       ROCKET_POOL_NODE_MANAGER,
-      [SET_WITHDRAWAL_ADDRESS_METHOD_ID, REGISTER_NODE_METHOD_ID],
+      [], // No method ID restrictions - check for any interaction
       1, // At least 1 interaction
       1 // Ethereum mainnet
     );
   } catch (error) {
-    console.error("Error verifying Rocket Pool Node Operator:", error);
-    throw new Error("Failed to verify Rocket Pool Node Operator");
+    console.error(
+      "Error verifying Rocket Pool Node Manager interaction:",
+      error
+    );
+    return false;
   }
 }
 
@@ -35,11 +40,15 @@ export async function GET(req: NextRequest) {
     if (!address || !isAddress(address)) {
       return new Response(
         JSON.stringify({ error: "Invalid address provided" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
       );
     }
 
     const mint_eligibility = await isRocketPoolNodeOperator(address as Address);
+
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,

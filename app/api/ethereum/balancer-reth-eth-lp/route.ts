@@ -11,7 +11,7 @@ const client = createPublicClient({
 
 // Balancer rETH/ETH V2 pool LP token contract address
 const BALANCER_RETH_ETH_LP_TOKEN =
-  "0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112" as Address;
+  "0x79eF6103A513951a3b25743DB509E267685726B7" as Address;
 
 // ERC20 ABI for balanceOf
 const ERC20_ABI = [
@@ -24,10 +24,15 @@ const ERC20_ABI = [
   },
 ];
 
-async function hasBalancerRethEthLpPosition(address: Address): Promise<{
-  mint_eligibility: boolean;
-  balance: string;
-}> {
+/**
+ * Verifies if an address has Balancer rETH/ETH LP position
+ *
+ * @param address - Ethereum address to check
+ * @returns Boolean indicating if address has Balancer rETH/ETH LP position
+ */
+async function hasBalancerRethEthLpPosition(
+  address: Address
+): Promise<boolean> {
   try {
     const balance = (await client.readContract({
       address: BALANCER_RETH_ETH_LP_TOKEN,
@@ -36,16 +41,10 @@ async function hasBalancerRethEthLpPosition(address: Address): Promise<{
       args: [address],
     })) as bigint;
 
-    const mint_eligibility = balance > BigInt(0);
-    const balanceInLp = Number(balance) / Math.pow(10, 18); // LP token has 18 decimals
-
-    return {
-      mint_eligibility,
-      balance: balanceInLp.toFixed(6),
-    };
+    return balance > BigInt(0);
   } catch (error) {
     console.error("Error verifying Balancer rETH/ETH LP position:", error);
-    throw new Error("Failed to verify Balancer rETH/ETH LP position");
+    return false;
   }
 }
 
@@ -64,44 +63,25 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification result
-    const result = await hasBalancerRethEthLpPosition(address as Address);
+    const mint_eligibility = await hasBalancerRethEthLpPosition(
+      address as Address
+    );
 
     // Generate cryptographic signature of the verification result
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: result.mint_eligibility,
+      mint_eligibility,
     });
 
-    return new Response(
-      JSON.stringify({
-        mint_eligibility: result.mint_eligibility,
-        data: result.balance,
-        signature,
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      }
-    );
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Error in handler:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
-    return new Response(
-      JSON.stringify({
-        error: "Internal server error",
-        details: errorMessage,
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      }
-    );
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
