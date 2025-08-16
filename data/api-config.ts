@@ -1,6 +1,69 @@
 export const endpoints = [
   {
     method: "GET",
+    path: "/api/ethereum/reth-holder",
+    id: "verifyrethholder",
+    description:
+      "Verifies if an Ethereum address holds rETH tokens on Ethereum mainnet and returns eligibility status with balance and cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/rpl-holder",
+    id: "verifyrplholder",
+    description:
+      "Verifies if an Ethereum address holds RPL tokens on Ethereum mainnet and returns eligibility status with balance and cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/eigenlayer-reth-depositor",
+    id: "verifyeigenlayerrethdepositor",
+    description:
+      "Verifies if an Ethereum address has deposited rETH to EigenLayer on Ethereum mainnet and returns eligibility status with balance and cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/aave-reth-supplier",
+    id: "verifyaaverethsupplier",
+    description:
+      "Verifies if an Ethereum address supplies rETH to Aave on Ethereum mainnet and returns eligibility status with balance and cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/spark-reth-borrower",
+    id: "verifysparkrethborrower",
+    description:
+      "Verifies if an Ethereum address borrows rETH from Spark on Ethereum mainnet and returns eligibility status with balance and cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/liquity-reth-stability-pool",
+    id: "verifyliquityrethstabilitypool",
+    description:
+      "Verifies if an Ethereum address has deposited rETH to Liquity's Stability Pool on Ethereum mainnet and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/balancer-reth-eth-lp",
+    id: "verifybalancerrethethlp",
+    description:
+      "Verifies if an Ethereum address has LP positions in Balancer's rETH/ETH pool on Ethereum mainnet and returns eligibility status with balance and cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/gamma-reth-weth-pool",
+    id: "verifygammarethwethpool",
+    description:
+      "Verifies if an Ethereum address has deposited to Gamma's rETH/WETH POOL on Ethereum mainnet and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/rocketpool-node-operator",
+    id: "verifyrocketpoolnodeoperator",
+    description:
+      "Verifies if an Ethereum address is a Rocket Pool Node Operator on Ethereum mainnet and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
     path: "/api/ethereum/zora-coined-it",
     id: "verifyzoracoineddit",
     description:
@@ -706,6 +769,7 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has staked cvxCRV tokens on Convex Finance and returns eligibility status with cryptographic signature",
   },
+
 ];
 
 export const parameters = [

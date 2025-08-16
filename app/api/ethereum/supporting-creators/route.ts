@@ -21,7 +21,7 @@ interface ZoraProfileResponse {
 }
 
 const ZORA_API_ENDPOINT = "https://api.zora.co/universal/graphql";
-const SUPPORTING_CREATORS_THRESHOLD = 10; // Need 10+ collected coins
+const SUPPORTING_CREATORS_THRESHOLD = 10;
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,25 +38,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const result = await verifySupportingCreators(address as Address);
+    const mint_eligibility = await verifySupportingCreators(address as Address);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: result.mint_eligibility,
+      mint_eligibility,
     });
 
-    return new Response(
-      JSON.stringify({
-        mint_eligibility: result.mint_eligibility,
-        data: result.collectedCount,
-        signature,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Error in handler:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
@@ -70,11 +63,9 @@ export async function GET(req: NextRequest) {
  * Verifies if an address has collected 10+ Creator Coins on Zora
  *
  * @param address - Ethereum address to check
- * @returns Object with eligibility status and collected count
+ * @returns Boolean indicating if address has collected 10+ Creator Coins
  */
-async function verifySupportingCreators(
-  address: Address
-): Promise<{ mint_eligibility: boolean; collectedCount: number }> {
+async function verifySupportingCreators(address: Address): Promise<boolean> {
   try {
     // GraphQL query to get collected items
     const query = `
@@ -106,31 +97,29 @@ async function verifySupportingCreators(
 
     if (!response.ok) {
       console.error(`Zora API request failed with status ${response.status}`);
-      return { mint_eligibility: false, collectedCount: 0 };
+      return false;
     }
 
     const data: ZoraProfileResponse = await response.json();
 
     if (data.errors) {
       console.error("Zora API GraphQL errors:", data.errors);
-      return { mint_eligibility: false, collectedCount: 0 };
+      return false;
     }
 
     const profile = data.data?.profile;
     if (!profile) {
-      return { mint_eligibility: false, collectedCount: 0 };
+      return false;
     }
 
     const collectedItems = profile.collectedCollectionsOrTokens?.edges || [];
     const collectedCount = collectedItems.length;
-    const mint_eligibility = collectedCount >= SUPPORTING_CREATORS_THRESHOLD;
-
-    return { mint_eligibility, collectedCount };
+    return collectedCount >= SUPPORTING_CREATORS_THRESHOLD;
   } catch (error) {
     console.error(
       `Error verifying Supporting Creators for address ${address}:`,
       error
     );
-    return { mint_eligibility: false, collectedCount: 0 };
+    return false;
   }
 }

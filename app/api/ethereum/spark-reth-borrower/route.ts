@@ -1,0 +1,107 @@
+import { NextRequest } from "next/server";
+import { Address, isAddress } from "viem";
+import { createSignature } from "@/app/lib/signature";
+import { createPublicClient, http } from "viem";
+import { mainnet } from "viem/chains";
+
+const client = createPublicClient({
+  chain: mainnet,
+  transport: http(),
+});
+
+// sprEthrETH token contract address (Spark's rETH debt token)
+const SPR_ETH_RETH_TOKEN =
+  "0x9985df20d7e9103ecbceb16a84956434b6f06ae8" as Address;
+
+// ERC20 ABI for balanceOf
+const ERC20_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+];
+
+async function hasSparkRethBorrow(address: Address): Promise<{
+  mint_eligibility: boolean;
+  balance: string;
+}> {
+  try {
+    const balance = (await client.readContract({
+      address: SPR_ETH_RETH_TOKEN,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    })) as bigint;
+
+    const mint_eligibility = balance > BigInt(0);
+    const balanceInEth = Number(balance) / Math.pow(10, 18); // sprEthrETH has 18 decimals
+
+    return {
+      mint_eligibility,
+      balance: balanceInEth.toFixed(6),
+    };
+  } catch (error) {
+    console.error("Error verifying Spark rETH borrow:", error);
+    throw new Error("Failed to verify Spark rETH borrow");
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const address = req.nextUrl.searchParams.get("address");
+
+    if (!address || !isAddress(address)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid address provided" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Get verification result
+    const result = await hasSparkRethBorrow(address as Address);
+
+    // Generate cryptographic signature of the verification result
+    const signature = await createSignature({
+      address: address as Address,
+      mint_eligibility: result.mint_eligibility,
+    });
+
+    return new Response(
+      JSON.stringify({
+        mint_eligibility: result.mint_eligibility,
+        data: result.balance,
+        signature,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Error in handler:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        details: errorMessage,
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
+  }
+}

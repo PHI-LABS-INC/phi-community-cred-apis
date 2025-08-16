@@ -43,25 +43,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification results
-    const result = await verifyCommunityBacked(address as Address);
+    const mint_eligibility = await verifyCommunityBacked(address as Address);
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: result.mint_eligibility,
+      mint_eligibility,
     });
 
-    return new Response(
-      JSON.stringify({
-        mint_eligibility: result.mint_eligibility,
-        data: result.maxHolders,
-        signature,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ mint_eligibility, signature }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Error in handler:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
@@ -75,12 +68,9 @@ export async function GET(req: NextRequest) {
  * Verifies if an address has a Creator Coin with over 20 holders on Zora
  *
  * @param address - Ethereum address to check
- * @returns Object with eligibility status and max holders count
+ * @returns Boolean indicating if address has a Creator Coin with 20+ holders
  */
-async function verifyCommunityBacked(address: Address): Promise<{
-  mint_eligibility: boolean;
-  maxHolders: number;
-}> {
+async function verifyCommunityBacked(address: Address): Promise<boolean> {
   try {
     // Query to get user's created coins with unique holders count
     const query = `
@@ -112,19 +102,19 @@ async function verifyCommunityBacked(address: Address): Promise<{
 
     if (!response.ok) {
       console.error(`Zora API request failed with status ${response.status}`);
-      return { mint_eligibility: false, maxHolders: 0 };
+      return false;
     }
 
     const data: ZoraProfileResponse = await response.json();
 
     if (data.errors) {
       console.error("Zora API GraphQL errors:", data.errors);
-      return { mint_eligibility: false, maxHolders: 0 };
+      return false;
     }
 
     const profile = data.data?.profile;
     if (!profile?.createdCoins?.edges.length) {
-      return { mint_eligibility: false, maxHolders: 0 };
+      return false;
     }
 
     const createdCoins = profile.createdCoins.edges;
@@ -136,14 +126,12 @@ async function verifyCommunityBacked(address: Address): Promise<{
       maxHolders = Math.max(maxHolders, uniqueHolders);
     }
 
-    const mint_eligibility = maxHolders >= COMMUNITY_BACKED_THRESHOLD;
-
-    return { mint_eligibility, maxHolders };
+    return maxHolders >= COMMUNITY_BACKED_THRESHOLD;
   } catch (error) {
     console.error(
       `Error verifying Community Backed for address ${address}:`,
       error
     );
-    return { mint_eligibility: false, maxHolders: 0 };
+    return false;
   }
 }
