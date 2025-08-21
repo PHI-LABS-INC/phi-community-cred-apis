@@ -1,6 +1,27 @@
 export const endpoints = [
   {
     method: "GET",
+    path: "/api/base/fluid-holder",
+    id: "verifyfluidholder",
+    description:
+      "Verifies if an Ethereum address holds Fluid tokens on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/fluid-usdc-depositor",
+    id: "verifyfluidusdcdepositor",
+    description:
+      "Verifies if an Ethereum address has deposited USDC into Fluid lending markets on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/baseflow-pilot",
+    id: "verifybaseflowpilot",
+    description:
+      "Verifies if an Ethereum address holds Fluid Vault (fVLT) ERC-721 tokens on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
     path: "/api/ethereum/reth-holder",
     id: "verifyrethholder",
     description:
@@ -769,7 +790,6 @@ export const endpoints = [
     description:
       "Verifies if an Ethereum address has staked cvxCRV tokens on Convex Finance and returns eligibility status with cryptographic signature",
   },
-
 ];
 
 export const parameters = [
