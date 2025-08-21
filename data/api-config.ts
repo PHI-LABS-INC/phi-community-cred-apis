@@ -1,6 +1,27 @@
 export const endpoints = [
   {
     method: "GET",
+    path: "/api/ethereum/lens-lover",
+    id: "verifylenslover",
+    description:
+      "Verifies if an Ethereum address has a Lens profile and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/lens-100-followers",
+    id: "verifylens100followers",
+    description:
+      "Verifies if an Ethereum address has a Lens profile with 100+ followers and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/ethereum/lens-poster",
+    id: "verifylensposter",
+    description:
+      "Verifies if an Ethereum address has posted 10+ times on Lens and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
     path: "/api/base/fluid-holder",
     id: "verifyfluidholder",
     description:
