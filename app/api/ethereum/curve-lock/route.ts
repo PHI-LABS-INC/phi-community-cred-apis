@@ -3,18 +3,38 @@ import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
-const LOCK_CONTRACT = "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2" as Address;
+// Ethereum Curve lock contract
+const LOCK_CONTRACT_ETH =
+  "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2" as Address;
 const LOCK_METHOD = "0x65fc3873";
+
+// Base Curve gauge factory (for veCRV-like functionality)
+const LOCK_CONTRACT_BASE =
+  "0xabc000d88f23bb45525e447528dbf656a9d55bf5" as Address; // Base gauge factory
 
 async function hasLockedCrv(address: Address): Promise<boolean> {
   try {
-    return await hasContractInteraction(
+    // Check Ethereum mainnet
+    const ethResult = await hasContractInteraction(
       address,
-      LOCK_CONTRACT,
+      LOCK_CONTRACT_ETH,
       [LOCK_METHOD], // Specific method ID for locking CRV
       1, // At least 1 interaction
       1 // Ethereum mainnet
     );
+
+    if (ethResult) return true;
+
+    // Check Base chain
+    const baseResult = await hasContractInteraction(
+      address,
+      LOCK_CONTRACT_BASE,
+      [LOCK_METHOD], // Specific method ID for locking CRV
+      1, // At least 1 interaction
+      8453 // Base chain
+    );
+
+    return baseResult;
   } catch (error) {
     console.error("Error verifying Curve lock:", {
       error,

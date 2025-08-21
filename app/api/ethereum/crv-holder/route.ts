@@ -2,12 +2,11 @@ import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { createPublicClient, http } from "viem";
-import { mainnet } from "viem/chains";
+import { mainnet, base } from "viem/chains";
 
-const client = createPublicClient({
-  chain: mainnet,
-  transport: http(),
-});
+// Create clients for both chains
+const mainnetClient = createPublicClient({ chain: mainnet, transport: http() });
+const baseClient = createPublicClient({ chain: base, transport: http() });
 
 // Contract ABIs
 const ERC20_ABI = [
@@ -22,19 +21,45 @@ const ERC20_ABI = [
 
 async function hasCrvTokens(address: Address): Promise<boolean> {
   try {
-    const CRV_TOKEN = "0xD533a949740bb3306d119CC777fa900bA034cd52";
+    // Ethereum CRV token
+    const CRV_TOKEN_ETH = "0xD533a949740bb3306d119CC777fa900bA034cd52";
 
-    // Check CRV token balance using viem
-    const tokenBalance = (await client.readContract({
-      address: CRV_TOKEN,
-      abi: ERC20_ABI,
-      functionName: "balanceOf",
-      args: [address],
-    })) as bigint;
+    // Base CRV token (bridged from Ethereum)
+    const CRV_TOKEN_BASE = "0x8Ee73c484A26e0A5df2Ee2a4960B789967dd0415";
 
-    // Determine eligibility
-    const hasTokens = tokenBalance > BigInt(0);
-    return hasTokens;
+    // Check Ethereum mainnet CRV balance
+    try {
+      const ethTokenBalance = (await mainnetClient.readContract({
+        address: CRV_TOKEN_ETH,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [address],
+      })) as bigint;
+
+      if (ethTokenBalance > BigInt(0)) {
+        return true;
+      }
+    } catch {
+      console.log("No CRV tokens on Ethereum mainnet");
+    }
+
+    // Check Base chain CRV balance
+    try {
+      const baseTokenBalance = (await baseClient.readContract({
+        address: CRV_TOKEN_BASE,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [address],
+      })) as bigint;
+
+      if (baseTokenBalance > BigInt(0)) {
+        return true;
+      }
+    } catch {
+      console.log("No CRV tokens on Base chain");
+    }
+
+    return false;
   } catch (error) {
     console.error("Error verifying CRV holdings:", error);
     throw new Error("Failed to verify CRV holdings");

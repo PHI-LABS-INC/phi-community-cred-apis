@@ -2,12 +2,11 @@ import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { createPublicClient, http } from "viem";
-import { mainnet } from "viem/chains";
+import { mainnet, base } from "viem/chains";
 
-const client = createPublicClient({
-  chain: mainnet,
-  transport: http(),
-});
+// Create clients for both chains
+const mainnetClient = createPublicClient({ chain: mainnet, transport: http() });
+const baseClient = createPublicClient({ chain: base, transport: http() });
 
 // Contract ABIs
 const ERC20_ABI = [
@@ -22,19 +21,45 @@ const ERC20_ABI = [
 
 async function hasCrvUsdTokens(address: Address): Promise<boolean> {
   try {
-    const CRVUSD_TOKEN = "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E";
+    // Ethereum crvUSD token
+    const CRVUSD_TOKEN_ETH = "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E";
 
-    // Check crvUSD token balance using viem
-    const tokenBalance = (await client.readContract({
-      address: CRVUSD_TOKEN,
-      abi: ERC20_ABI,
-      functionName: "balanceOf",
-      args: [address],
-    })) as bigint;
+    // Base crvUSD token (bridged from Ethereum)
+    const CRVUSD_TOKEN_BASE = "0x417Ac0e078398C154EdFadD9Ef675d30Be60Af93";
 
-    // Determine eligibility
-    const hasTokens = tokenBalance > BigInt(0);
-    return hasTokens;
+    // Check Ethereum mainnet crvUSD balance
+    try {
+      const ethTokenBalance = (await mainnetClient.readContract({
+        address: CRVUSD_TOKEN_ETH,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [address],
+      })) as bigint;
+
+      if (ethTokenBalance > BigInt(0)) {
+        return true;
+      }
+    } catch {
+      console.log("No crvUSD tokens on Ethereum mainnet");
+    }
+
+    // Check Base chain crvUSD balance
+    try {
+      const baseTokenBalance = (await baseClient.readContract({
+        address: CRVUSD_TOKEN_BASE,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [address],
+      })) as bigint;
+
+      if (baseTokenBalance > BigInt(0)) {
+        return true;
+      }
+    } catch {
+      console.log("No crvUSD tokens on Base chain");
+    }
+
+    return false;
   } catch (error) {
     console.error("Error verifying crvUSD holdings:", error);
     throw new Error("Failed to verify crvUSD holdings");
