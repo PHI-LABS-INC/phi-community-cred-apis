@@ -2,12 +2,11 @@ import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { createPublicClient, http } from "viem";
-import { mainnet, base } from "viem/chains";
+import { mainnet } from "viem/chains";
 import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
 // Create clients for both chains
 const mainnetClient = createPublicClient({ chain: mainnet, transport: http() });
-const baseClient = createPublicClient({ chain: base, transport: http() });
 
 // Contract ABIs
 const ERC20_ABI = [
