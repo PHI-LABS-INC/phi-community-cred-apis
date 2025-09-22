@@ -1,26 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Address, isAddress } from "viem";
+import { Address, isAddress, createPublicClient, http } from "viem";
+import { base } from "viem/chains";
 import { createSignature } from "@/app/lib/signature";
 import { getTransactions } from "@/app/lib/smart-wallet";
+
+// Create Base client
+const baseClient = createPublicClient({
+  chain: base,
+  transport: http(),
+});
 
 async function verifyTransactionCount(
   address: Address
 ): Promise<[boolean, string]> {
   try {
-    // Use getTransactions to support both EOAs and smart contract wallets
-    const transactions = await getTransactions(address, 8453); // Base chain
-    return [transactions.length >= 100, transactions.length.toString()];
+    const transactionCount = await baseClient.getTransactionCount({ address });
+    return [transactionCount >= 100, transactionCount.toString()];
   } catch (error) {
-    console.error("Error verifying transaction count:", {
-      error,
-      address,
-      timestamp: new Date().toISOString(),
-    });
-    throw new Error(
-      `Failed to verify transaction count: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
+    console.warn(
+      "Viem getTransactionCount failed, trying smart wallet approach:",
+      {
+        error,
+        address,
+      }
     );
+
+    try {
+      const transactions = await getTransactions(address, 8453); // Base chain
+      return [transactions.length >= 100, transactions.length.toString()];
+    } catch (fallbackError) {
+      console.error("Both viem and smart wallet approaches failed:", {
+        viemError: error,
+        fallbackError,
+        address,
+        timestamp: new Date().toISOString(),
+      });
+      throw new Error(
+        `Failed to verify transaction count: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
   }
 }
 
