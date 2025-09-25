@@ -1,77 +1,153 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-import { getTransactions } from "@/app/lib/smart-wallet";
+import { getEOATransactions, isContractAddress } from "@/app/lib/smart-wallet";
 
-async function verifyEthereumOG(address: Address): Promise<boolean> {
+/**
+ * Get the first transaction for an address using Etherscan API with ascending order
+ */
+async function getFirstTransaction(
+  address: Address
+): Promise<{ blockNumber: string } | null> {
   try {
-    // Use getTransactions to get the transaction history
-    const transactions = await getTransactions(address, 1); // Ethereum mainnet
-    if (transactions && transactions.length > 0) {
-      // Get the earliest transaction (lowest block number)
-      const firstTransaction = transactions.reduce((min, tx) =>
-        parseInt(tx.blockNumber) < parseInt(min.blockNumber) ? tx : min
-      );
-      // Check if the transaction block number is before or equal to block 6985879 (Dec 31, 2018)
-      const isOG = parseInt(firstTransaction.blockNumber) <= 6985879;
-      console.log(
-        `Address ${address} first transaction block: ${firstTransaction.blockNumber}, 2018 status: ${isOG}`
-      );
-      return isOG;
+    const apiKeys = [
+      process.env.ETHERSCAN_API_KEY,
+      process.env.ETHERSCAN_API_KEY2,
+      process.env.ETHERSCAN_API_KEY3,
+    ].filter(Boolean);
+
+    if (apiKeys.length === 0) {
+      throw new Error("No Etherscan API keys available");
     }
-    // If no transactions found, not eligible
-    console.log(`Address ${address} has no transactions before block 6985879`);
-    return false;
+
+    const apiKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
+    const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=latest&page=1&offset=1&sort=asc&apikey=${apiKey}`;
+
+    console.log(`[etherscan] Fetching first transaction for ${address}...`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch first transaction: ${response.statusText}`
+      );
+    }
+
+    const data = (await response.json()) as {
+      status: string;
+      message: string;
+      result: Array<{ blockNumber: string }>;
+    };
+
+    if (data.status === "1" && data.result && data.result.length > 0) {
+      return data.result[0];
+    }
+
+    return null;
   } catch (error) {
-    console.error("Error verifying Ethereum 2018 status:", {
-      error,
+    console.error("Error fetching first transaction:", error);
+    return null;
+  }
+}
+
+async function verifyEthereumOG2018(
+  address: Address
+): Promise<[boolean, string]> {
+  try {
+    // Check if address is a contract first
+    const isContract = await isContractAddress(address, 1);
+
+    if (isContract) {
+      console.log(
+        `Address ${address} is a smart contract, using GraphQL approach`
+      );
+      // For smart contracts, use the existing getTransactions approach
+      const transactions = await getEOATransactions(address, 1);
+
+      if (transactions && transactions.length > 0) {
+        const sortedTxs = transactions.sort(
+          (a, b) => parseInt(a.blockNumber) - parseInt(b.blockNumber)
+        );
+
+        const firstTx = sortedTxs[0];
+        const blockNumber = parseInt(firstTx.blockNumber);
+        const isOG2018 = blockNumber <= 7710000;
+
+        console.log(
+          `Smart contract ${address} first transaction block: ${firstTx.blockNumber} (${blockNumber}), 2018 threshold: 7710000, 2018 status: ${isOG2018}`
+        );
+
+        return [isOG2018, firstTx.blockNumber];
+      }
+    } else {
+      console.log(`Address ${address} is an EOA, using direct Etherscan call`);
+      // For EOA addresses, use direct Etherscan call with ascending order to get the first transaction
+      const firstTx = await getFirstTransaction(address);
+
+      if (firstTx) {
+        const blockNumber = parseInt(firstTx.blockNumber);
+        const isOG2018 = blockNumber <= 7710000;
+
+        console.log(
+          `EOA ${address} first transaction block: ${firstTx.blockNumber} (${blockNumber}), 2018 threshold: 7710000, 2018 status: ${isOG2018}`
+        );
+
+        return [isOG2018, firstTx.blockNumber];
+      }
+    }
+
+    console.log(`Address ${address} has no transactions found`);
+    return [false, "0"];
+  } catch (error) {
+    console.error("Error verifying Ethereum OG 2018 status:", {
+      error: error instanceof Error ? error.message : String(error),
       address,
-      timestamp: new Date().toISOString(),
     });
-    return false;
+    return [false, "0"];
   }
 }
 
 export async function GET(req: NextRequest) {
-  try {
-    const address = req.nextUrl.searchParams.get("address");
+  const address = req.nextUrl.searchParams.get("address");
 
-    if (!address || !isAddress(address)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid address provided" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
+  if (!address || !isAddress(address)) {
+    return NextResponse.json(
+      { error: "Invalid address provided" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    let mint_eligibility = false;
+    let data = "0";
+
+    try {
+      const [eligible, blockNumber] = await verifyEthereumOG2018(
+        address as Address
       );
+      mint_eligibility = eligible;
+      data = blockNumber;
+    } catch (error) {
+      console.warn(`Error checking address ${address}:`, error);
     }
 
-    const mint_eligibility = await verifyEthereumOG(address as Address);
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,
+      data,
     });
 
-    return new Response(JSON.stringify({ mint_eligibility, signature }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-      },
-    });
+    return NextResponse.json(
+      { mint_eligibility, data, signature },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error processing GET request:", {
       error,
       timestamp: new Date().toISOString(),
     });
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Internal server error",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+    return NextResponse.json(
+      { error: "Please try again later" },
+      { status: 500 }
     );
   }
 }

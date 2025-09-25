@@ -75,7 +75,7 @@ export async function getEOATransactions(
 
   const BASE_URL =
     chainId === 8453
-      ? "https://api.etherscan.io/v2/api"
+      ? "https://api.basescan.org/api"
       : "https://api.etherscan.io/api";
 
   const RATE_LIMIT_DELAY = 200;
