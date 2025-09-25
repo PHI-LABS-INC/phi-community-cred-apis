@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Address, isAddress } from "viem";
+import { Address, isAddress, createPublicClient, http } from "viem";
+import { mainnet } from "viem/chains";
 import { createSignature } from "@/app/lib/signature";
 import { getEOATransactions, isContractAddress } from "@/app/lib/smart-wallet";
 
@@ -53,8 +54,14 @@ async function verifyEthereumOG2016(
   address: Address
 ): Promise<[boolean, string]> {
   try {
+    // Create mainnet client for contract checking
+    const mainnetClient = createPublicClient({
+      chain: mainnet,
+      transport: http(),
+    });
+
     // Check if address is a contract first
-    const isContract = await isContractAddress(address, 1);
+    const isContract = await isContractAddress(mainnetClient, address);
 
     if (isContract) {
       console.log(

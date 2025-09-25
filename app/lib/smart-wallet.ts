@@ -1,4 +1,4 @@
-import { Address, createPublicClient, http } from "viem";
+import { Address, PublicClient, createPublicClient, http } from "viem";
 import { base, mainnet } from "viem/chains";
 
 // Types for transaction data
@@ -41,17 +41,35 @@ const mainnetClient = createPublicClient({ chain: mainnet, transport: http() });
  * Check if an address is a smart contract
  */
 export async function isContractAddress(
-  address: Address,
-  chainId: number = 8453
+  client: PublicClient,
+  address: Address
 ): Promise<boolean> {
   try {
-    const client = chainId === 8453 ? baseClient : mainnetClient;
     const code = await client.getCode({ address });
-    return code !== undefined && code !== "0x";
+
+    // If no code exists, it's an EOA (false)
+    if (!code || code === "0x") {
+      return false;
+    }
+
+    // Check if it's an EIP-7702 delegation indicator
+    // Format: 0xef0100 + 20-byte address = 23 bytes
+    // String length: 0x + 46 characters (23 bytes * 2) = 48 characters
+    if (code.length === 48 && code.toLowerCase().startsWith("0xef0100")) {
+      return false; // Treat as EIP-7702 delegated EOA
+    }
+
+    // Regular smart contract
+    return true;
   } catch (error) {
     console.error("Error checking contract address:", {
       address,
       error: error instanceof Error ? error.message : String(error),
+      fullError: error,
+      clientState: {
+        exists: !!client,
+        methods: client ? Object.keys(client) : [],
+      },
     });
     return false;
   }
@@ -209,7 +227,8 @@ export async function getTransactions(
   address: Address,
   chainId: number = 8453
 ): Promise<TransactionItem[]> {
-  const isContract = await isContractAddress(address, chainId);
+  const client = chainId === 8453 ? baseClient : mainnetClient;
+  const isContract = await isContractAddress(client as PublicClient, address);
 
   if (isContract) {
     console.log(`Address ${address} is a smart contract, using GraphQL API`);
