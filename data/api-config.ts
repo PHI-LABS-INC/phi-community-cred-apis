@@ -1,6 +1,34 @@
 export const endpoints = [
   {
     method: "GET",
+    path: "/api/base/aero-locker",
+    id: "verifyaerolocker",
+    description:
+      "Verifies if an Ethereum address has locked AERO in Aerodrome's locker and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/aero-swapper",
+    id: "verifyaeroswapper10",
+    description:
+      "Verifies if an Ethereum address has completed at least 10 swaps on Aerodrome and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/aero-voter",
+    id: "verifyaero-voter",
+    description:
+      "Verifies if an Ethereum address has voted in Aerodrome's governance and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/aero-staker",
+    id: "verifyaero-staker",
+    description:
+      "Verifies if an Ethereum address has staked AERO in Aerodrome's staking contract and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
     path: "/api/ethereum/lens-lover",
     id: "verifylenslover",
     description:

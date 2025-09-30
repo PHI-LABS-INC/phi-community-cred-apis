@@ -91,10 +91,8 @@ export async function getEOATransactions(
           process.env.ETHERSCAN_API_KEY3,
         ];
 
-  const BASE_URL =
-    chainId === 8453
-      ? "https://api.basescan.org/api"
-      : "https://api.etherscan.io/api";
+  // Use Etherscan V2 API for all chains
+  const BASE_URL = `https://api.etherscan.io/v2/api?chainid=${chainId}`;
 
   const RATE_LIMIT_DELAY = 200;
   const PAGE_SIZE = 10000;
@@ -109,7 +107,7 @@ export async function getEOATransactions(
     retries = 0
   ): Promise<TransactionItem[]> => {
     const apiKey = API_KEYS[Math.floor(Math.random() * API_KEYS.length)];
-    const url = `${BASE_URL}?chainId=${chainId}&module=account&action=txlist&address=${address}&startblock=0&endblock=latest&page=${page}&offset=${PAGE_SIZE}&sort=desc&apikey=${apiKey}`;
+    const url = `${BASE_URL}&module=account&action=txlist&address=${address}&startblock=0&endblock=latest&page=${page}&offset=${PAGE_SIZE}&sort=desc&apikey=${apiKey}`;
 
     console.log(`[etherscan] Fetching page ${page} for chain ${chainId}...`);
     try {
@@ -346,12 +344,19 @@ export async function hasContractInteraction(
     const transactions = await getTransactions(address, chainId);
 
     const verifiedTxs = transactions.filter((tx) => {
+      // Skip transactions with undefined 'to' address
+      if (!tx.to) {
+        return false;
+      }
+
       if (tx.to.toLowerCase() !== contractAddress.toLowerCase()) {
         return false;
       }
+
       if (methodIds.length === 0) {
         return true;
       }
+
       return methodIds.some(
         (id) => tx.methodId?.toLowerCase() === id.toLowerCase()
       );
