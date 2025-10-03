@@ -1,11 +1,14 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-import { getTransactions } from "@/app/lib/smart-wallet";
+import {
+  hasContractInteraction,
+  getTransactions,
+} from "@/app/lib/smart-wallet";
 
 // Gitcoin Grants contract address
 const GITCOIN_GRANTS_CONTRACT =
-  "0xdf869FAD6dB91f437B59F1EdEFab319493D4C4cE" as Address;
+  "0x7d655c57f71464B6f83811C55D84009Cd9f5221C" as Address;
 
 export async function GET(req: NextRequest) {
   try {
@@ -79,20 +82,32 @@ async function verifyGitcoinContributor(
   address: Address
 ): Promise<[boolean, string]> {
   try {
-    // Use getTransactions to count all interactions with the Gitcoin Grants contract
-    const txs = await getTransactions(address, 1); // Ethereum mainnet
-    const gitcoinTransactions = txs.filter(
-      (tx) => tx.to?.toLowerCase() === GITCOIN_GRANTS_CONTRACT.toLowerCase()
+    // Check for any interaction with the Gitcoin Grants contract
+    const hasInteraction = await hasContractInteraction(
+      address,
+      GITCOIN_GRANTS_CONTRACT,
+      [], // No specific methods
+      1, // At least 1 interaction
+      1 // Ethereum mainnet
     );
-    const contributionCount = gitcoinTransactions.length;
-    const isEligible = contributionCount > 0;
-    return [isEligible, contributionCount.toString()];
+
+    if (hasInteraction) {
+      // Get the exact count of interactions
+      const txs = await getTransactions(address, 1); // Ethereum mainnet
+      const gitcoinTransactions = txs.filter(
+        (tx) => tx.to?.toLowerCase() === GITCOIN_GRANTS_CONTRACT.toLowerCase()
+      );
+      return [true, gitcoinTransactions.length.toString()];
+    }
+
+    return [false, "0"];
   } catch (error) {
-    console.error("Error verifying Gitcoin contributions:", error);
-    throw new Error(
-      `Failed to verify Gitcoin contributions: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
+    console.error("Error verifying Gitcoin contributions:", {
+      error,
+      address,
+      timestamp: new Date().toISOString(),
+    });
+    // Return false instead of throwing to handle errors gracefully
+    return [false, "0"];
   }
 }

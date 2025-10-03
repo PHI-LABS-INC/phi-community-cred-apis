@@ -3,28 +3,31 @@ import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 import { hasContractInteraction } from "@/app/lib/smart-wallet";
 
-// Official Aerodrome VotingEscrow contract (same as locker since staking is done through veNFT)
-const AERO_STAKING = "0xeBf418Fe2512e7E6bd9b87a8F0f294aCDC67e6B4";
+// Aerodrome Gauge Factory contract
+const GAUGE_FACTORY = "0x4E2b77f04b8F5a8Ed539a5B61E632E7EF6102592";
 
-async function hasStakedAero(address: Address): Promise<boolean> {
+// Stake method ID for Aerodrome gauges
+const STAKE_METHOD_ID = "0xa694fc3a"; // stake(uint256)
+
+async function hasStakedLiquidity(address: Address): Promise<boolean> {
   try {
-    // Check if address has staked AERO tokens at least once
+    // Check if address has staked liquidity in any Aerodrome gauge
     const hasInteracted = await hasContractInteraction(
       address,
-      AERO_STAKING as Address,
-      [], // Check all interactions
+      GAUGE_FACTORY as Address,
+      [STAKE_METHOD_ID], // Check for stake method calls
       1, // At least 1 stake
       8453 // Base chain
     );
     return hasInteracted;
   } catch (error) {
-    console.error("Error verifying AERO stakes:", {
+    console.error("Error verifying Aerodrome liquidity stakes:", {
       error,
       address,
       timestamp: new Date().toISOString(),
     });
     throw new Error(
-      `Failed to verify AERO stakes: ${
+      `Failed to verify Aerodrome liquidity stakes: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
     );
@@ -45,7 +48,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mint_eligibility = await hasStakedAero(address as Address);
+    const mint_eligibility = await hasStakedLiquidity(address as Address);
     const signature = await createSignature({
       address: address as Address,
       mint_eligibility,

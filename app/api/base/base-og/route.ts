@@ -14,18 +14,20 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Verify if the wallet has made any transaction on Base in August 2023.
-    const transactedInAugust = await verifyAugustTransact(address as Address);
+    // Verify if the wallet has made any transaction on Base in July or August 2023.
+    const transactedInJulyAugust = await verifyJulyAugustTransact(
+      address as Address
+    );
 
     // Generate a signature including the verification result.
     const signature = await createSignature({
       address: address as Address,
-      mint_eligibility: transactedInAugust,
+      mint_eligibility: transactedInJulyAugust,
     });
 
     return new Response(
       JSON.stringify({
-        mint_eligibility: transactedInAugust,
+        mint_eligibility: transactedInJulyAugust,
         signature,
       }),
       {
@@ -49,28 +51,28 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Verifies if a wallet has made any transaction on Base in August 2023.
+ * Verifies if a wallet has made any transaction on Base in July or August 2023.
  * This function uses getTransactions from smart-wallet.ts to fetch all transactions for the given address
- * and then filters them using the August 2023 time window.
+ * and then filters them using the July-August 2023 time window.
  *
  * @param address - The Ethereum address to verify.
- * @returns {Promise<boolean>} - True if at least one transaction occurred during August 2023; otherwise, false.
+ * @returns {Promise<boolean>} - True if at least one transaction occurred during July or August 2023; otherwise, false.
  */
-async function verifyAugustTransact(address: Address): Promise<boolean> {
-  // Define August 2023 (UTC) time window.
-  const augustStartTimestamp = 1690848000; // August 1, 2023 00:00:00 UTC
+async function verifyJulyAugustTransact(address: Address): Promise<boolean> {
+  // Define July-August 2023 (UTC) time window.
+  const julyStartTimestamp = 1688169600; // July 1, 2023 00:00:00 UTC
   const augustEndTimestamp = 1693526399; // August 31, 2023 23:59:59 UTC
 
   try {
     // Fetch all transactions using getTransactions from smart-wallet.ts
     const transactions = await getTransactions(address, 8453); // Base chain
 
-    // Check if any transaction occurred during the defined August time window.
+    // Check if any transaction occurred during the defined July-August time window.
     return transactions.some((tx) => {
       if (!tx.timeStamp) return false;
       const txTimestamp = Number(tx.timeStamp);
       return (
-        txTimestamp >= augustStartTimestamp && txTimestamp <= augustEndTimestamp
+        txTimestamp >= julyStartTimestamp && txTimestamp <= augustEndTimestamp
       );
     });
   } catch (error) {

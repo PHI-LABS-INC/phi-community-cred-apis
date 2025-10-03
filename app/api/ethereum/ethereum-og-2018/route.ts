@@ -11,11 +11,7 @@ async function getFirstTransaction(
   address: Address
 ): Promise<{ blockNumber: string } | null> {
   try {
-    const apiKeys = [
-      process.env.ETHERSCAN_API_KEY,
-      process.env.ETHERSCAN_API_KEY2,
-      process.env.ETHERSCAN_API_KEY3,
-    ].filter(Boolean);
+    const apiKeys = [process.env.ETHERSCAN_API_KEY].filter(Boolean);
 
     if (apiKeys.length === 0) {
       throw new Error("No Etherscan API keys available");
