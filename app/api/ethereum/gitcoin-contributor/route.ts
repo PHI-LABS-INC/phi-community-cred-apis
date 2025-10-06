@@ -6,9 +6,13 @@ import {
   getTransactions,
 } from "@/app/lib/smart-wallet";
 
-// Gitcoin Grants contract address
-const GITCOIN_GRANTS_CONTRACT =
-  "0x7d655c57f71464B6f83811C55D84009Cd9f5221C" as Address;
+// Gitcoin Grants contract addresses
+const GITCOIN_GRANTS_CONTRACTS: Address[] = [
+  "0x7d655c57f71464B6f83811C55D84009Cd9f5221C", //imp
+  "0xDe30da39c46104798bB5aA3fe8B9e0e1F348163F",
+  "0xde21F729137C5Af1b01d73aF1dC21eFfa2B8a0d6",
+  "0x4AAcca72145e1dF2aeC137E1f3C5E3D75DB8b5f3"
+] as Address[];
 
 export async function GET(req: NextRequest) {
   try {
@@ -72,7 +76,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * Verifies if an address has contributed to Gitcoin Grants
- * Checks transaction history with the Gitcoin Grants contract using hasContractInteraction
+ * Checks transaction history with the Gitcoin Grants contracts using hasContractInteraction
  *
  * @param address - Ethereum address to check
  * @returns Tuple containing [boolean eligibility status, string transaction count]
@@ -82,20 +86,30 @@ async function verifyGitcoinContributor(
   address: Address
 ): Promise<[boolean, string]> {
   try {
-    // Check for any interaction with the Gitcoin Grants contract
-    const hasInteraction = await hasContractInteraction(
-      address,
-      GITCOIN_GRANTS_CONTRACT,
-      [], // No specific methods
-      1, // At least 1 interaction
-      1 // Ethereum mainnet
-    );
+    // Check for any interaction with any of the Gitcoin Grants contracts
+    let hasInteraction = false;
+    for (const contract of GITCOIN_GRANTS_CONTRACTS) {
+      if (
+        await hasContractInteraction(
+          address,
+          contract,
+          [], // No specific methods
+          1, // At least 1 interaction
+          1 // Ethereum mainnet
+        )
+      ) {
+        hasInteraction = true;
+        break;
+      }
+    }
 
     if (hasInteraction) {
-      // Get the exact count of interactions
+      // Get the exact count of interactions with all contracts
       const txs = await getTransactions(address, 1); // Ethereum mainnet
-      const gitcoinTransactions = txs.filter(
-        (tx) => tx.to?.toLowerCase() === GITCOIN_GRANTS_CONTRACT.toLowerCase()
+      const gitcoinTransactions = txs.filter((tx) =>
+        GITCOIN_GRANTS_CONTRACTS.some(
+          (contract) => tx.to?.toLowerCase() === contract.toLowerCase()
+        )
       );
       return [true, gitcoinTransactions.length.toString()];
     }
