@@ -2,22 +2,14 @@ import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 
-interface ZoraCreatedCoinEdge {
-  node: {
-    id: string;
-    createdAt: string;
-    name?: string;
-    symbol?: string;
-  };
+interface ZoraCoinBalances {
+  count: number;
 }
 
 interface ZoraProfileResponse {
   data: {
     profile?: {
-      createdCoins?: {
-        edges: ZoraCreatedCoinEdge[];
-        totalCount: number;
-      };
+      coinBalances?: ZoraCoinBalances;
     };
   };
   errors?: unknown[];
@@ -62,29 +54,22 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Verifies if an address has launched a Creator Coin on Zora
+ * Verifies if an address has any Creator Coin balances on Zora
  *
  * @param address - Ethereum address to check
- * @returns Boolean indicating if address has launched a Creator Coin
+ * @returns Boolean indicating if address has any Creator Coin balances
  */
 async function verifyZoraCoinedIt(address: Address): Promise<boolean> {
   try {
-    // GraphQL query to check if user has created any coins
+    // GraphQL query to check if user has any coin balances
     const query = `
       query ZoraCoinedIt($address: String!) {
-          profile(identifier: $address) {
-            createdCoins(first: 1) {
-              edges {
-                node {
-                  id
-                  createdAt
-                  name
-                  symbol
-                }
-              }
-            }
+        profile(identifier: $address) {
+          coinBalances(first: 10) {
+            count
           }
         }
+      }
     `;
 
     const response = await fetch(ZORA_API_ENDPOINT, {
@@ -117,8 +102,8 @@ async function verifyZoraCoinedIt(address: Address): Promise<boolean> {
       return false;
     }
 
-    const createdCoins = profile.createdCoins?.edges || [];
-    return createdCoins.length > 0;
+    const coinBalances = profile.coinBalances;
+    return coinBalances ? coinBalances.count > 0 : false;
   } catch (error) {
     console.error(
       `Error verifying Zora Coined It for address ${address}:`,
