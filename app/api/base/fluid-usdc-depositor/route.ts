@@ -47,7 +47,7 @@ async function isFluidUSDCDepositor(address: Address): Promise<boolean> {
   }
 }
 
-export async function FLUID_USDC_DEPOSITOR_GET(req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     const address = req.nextUrl.searchParams.get("address");
 
