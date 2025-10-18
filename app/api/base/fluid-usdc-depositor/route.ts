@@ -1,68 +1,53 @@
 import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
-import { hasContractInteraction } from "@/app/lib/smart-wallet";
+import { createPublicClient, http } from "viem";
+import { base } from "viem/chains";
 
-// Fluid lending markets contract addresses on Base
-// These are the main contracts users interact with for USDC deposits
-const FLUID_LENDING_CONTRACTS = [
-  "0x324c5dc1fc42c7a4d43d92df1eba58a54d13bf2d", // Fluid Vault (fVLT) - main lending contract
-] as const;
+const client = createPublicClient({
+  chain: base,
+  transport: http(),
+});
 
-// Common method IDs for deposit functions in Fluid lending
-const DEPOSIT_METHOD_ID = "0x6e553f65";
+// Fluid token contract address on Base
+const FLUID_TOKEN = "0xf42f5795D9ac7e9D757dB633D693cD548Cfd9169" as Address;
+
+// ERC20 ABI for balanceOf
+const ERC20_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+];
 
 /**
- * Verifies if an address has deposited USDC into Fluid lending markets on Base
+ * Checks if an address has deposited USDC into Fluid contract on Base
  *
- * @param address - Ethereum address to check
- * @returns Boolean indicating if address has deposited USDC to Fluid lending
+ * @param address - Base address to check
+ * @returns Boolean indicating if address has deposited USDC into Fluid contract
  */
-async function hasDepositedUSDCTofFluidLending(
-  address: Address
-): Promise<boolean> {
+async function isFluidUSDCDepositor(address: Address): Promise<boolean> {
   try {
-    // Check for interactions with Fluid lending contracts
-    for (const contract of FLUID_LENDING_CONTRACTS) {
-      // Check for any interaction with the contract
-      const hasInteraction = await hasContractInteraction(
-        address,
-        contract as Address,
-        [], // No method ID restrictions - check for any interaction
-        1, // At least 1 interaction
-        8453 // Base chain
-      );
+    // Check Fluid token balance
+    const fluidBalance = (await client.readContract({
+      address: FLUID_TOKEN,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [address],
+    })) as bigint;
 
-      if (hasInteraction) {
-        return true;
-      }
-
-      // Also check for specific deposit method interactions
-      const hasDepositInteraction = await hasContractInteraction(
-        address,
-        contract as Address,
-        [DEPOSIT_METHOD_ID],
-        1, // At least 1 interaction
-        8453 // Base chain
-      );
-
-      if (hasDepositInteraction) {
-        return true;
-      }
-    }
-
-    return false;
+    // User must have Fluid tokens (indicating a deposit)
+    return fluidBalance > BigInt(0);
   } catch (error) {
-    console.error("Error verifying Fluid USDC lending deposit:", {
-      error,
-      address,
-      timestamp: new Date().toISOString(),
-    });
+    console.error("Error verifying Fluid USDC depositor:", error);
     return false;
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function FLUID_USDC_DEPOSITOR_GET(req: NextRequest) {
   try {
     const address = req.nextUrl.searchParams.get("address");
 
@@ -77,9 +62,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get verification result
-    const mint_eligibility = await hasDepositedUSDCTofFluidLending(
-      address as Address
-    );
+    const mint_eligibility = await isFluidUSDCDepositor(address as Address);
 
     // Generate cryptographic signature of the verification result
     const signature = await createSignature({
