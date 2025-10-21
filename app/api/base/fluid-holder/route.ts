@@ -10,7 +10,7 @@ const client = createPublicClient({
 });
 
 // Fluid token contract address on Base
-const FLUID_TOKEN = "0x324c5dc1fc42c7a4d43d92df1eba58a54d13bf2d" as Address;
+const FLUID_TOKEN = "0x61E030A56D33e8260FdD81f03B162A79Fe3449Cd" as Address;
 
 // ERC20 ABI for balanceOf
 const ERC20_ABI = [
