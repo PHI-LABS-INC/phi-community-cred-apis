@@ -1,4 +1,11 @@
 export const endpoints = [
+    {
+        method: "GET",
+        path: "/api/base/based-caster",
+        id: "verifybasedcaster",
+        description:
+          "Verifies if an Ethereum address has posted at least once on Farcaster and returns eligibility status with cryptographic signature",
+      },
   {
     method: "GET",
     path: "/api/base/aero-locker",
@@ -838,6 +845,13 @@ export const endpoints = [
     id: "verifycvxcrvstaker",
     description:
       "Verifies if an Ethereum address has staked cvxCRV tokens on Convex Finance and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/based-caster",
+    id: "verifybasedcaster",
+    description:
+      "Verifies if an Ethereum address has posted at least once on Farcaster and returns eligibility status with cryptographic signature",
   },
 ];
 
