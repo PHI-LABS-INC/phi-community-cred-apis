@@ -1,11 +1,11 @@
 export const endpoints = [
-    {
-        method: "GET",
-        path: "/api/base/based-caster",
-        id: "verifybasedcaster",
-        description:
-          "Verifies if an Ethereum address has posted at least once on Farcaster and returns eligibility status with cryptographic signature",
-      },
+  {
+    method: "GET",
+    path: "/api/base/based-caster",
+    id: "verifybasedcaster",
+    description:
+      "Verifies if an Ethereum address has posted at least once on Farcaster and returns eligibility status with cryptographic signature",
+  },
   {
     method: "GET",
     path: "/api/base/aero-locker",
@@ -845,6 +845,20 @@ export const endpoints = [
     id: "verifycvxcrvstaker",
     description:
       "Verifies if an Ethereum address has staked cvxCRV tokens on Convex Finance and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/jesse-holder-100",
+    id: "verifyjesseholder",
+    description:
+      "Verifies if an Ethereum address holds at least 100 $JESSE tokens and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
+    path: "/api/base/jesse-day-one",
+    id: "verifyjessedayone",
+    description:
+      "Verifies if an Ethereum address bought $JESSE on launch day and returns eligibility status with cryptographic signature",
   },
   {
     method: "GET",
