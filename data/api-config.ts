@@ -862,6 +862,13 @@ export const endpoints = [
   },
   {
     method: "GET",
+    path: "/api/monad/airdrop-receiver",
+    id: "verifymonadairdropreceiver",
+    description:
+      "Verifies if a Monad address has received any tokens (indicating airdrop eligibility) and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
     path: "/api/base/based-caster",
     id: "verifybasedcaster",
     description:
