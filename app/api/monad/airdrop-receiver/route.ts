@@ -1,99 +1,120 @@
 import { NextRequest } from "next/server";
-import { Address, isAddress } from "viem";
+import { Address, formatEther, getAddress, isAddress } from "viem";
 import { createSignature } from "@/app/lib/signature";
 
-const BLOCKVISION_API_KEY = process.env.BLOCKVISION_API_KEY;
+const ETHERSCAN_ENDPOINT = "https://api.etherscan.io/v2/api";
+const MONAD_CHAIN_ID = "143"; // Monad mainnet
+const DEFAULT_OFFSET = "50";
+const MONAD_AIRDROP_DISTRIBUTOR = "0x68b665f94c8832430d524309c4d274acc1045186";
 
-interface BlockVisionToken {
-  contractAddress: string;
-  name: string;
-  imageURL: string;
-  symbol: string;
-  price: string;
-  decimal: number;
-  balance: string;
-  verified: boolean;
-}
-
-interface BlockVisionResponse {
-  code: number;
-  reason?: string;
-  message: string;
-  result: {
-    data: BlockVisionToken[];
-    total: number;
-    firstSeen: number;
-    usdValue: number;
-  };
-}
-
-/**
- * Fetches account tokens from BlockVision API for Monad
- * @param address - Monad address to check
- * @returns Promise<BlockVisionResponse> Token data from BlockVision
- */
-async function fetchMonadAccountTokens(
-  address: string
-): Promise<BlockVisionResponse> {
-  try {
-    const url = new URL("https://api.blockvision.org/v2/monad/account/tokens");
-    url.searchParams.set("address", address);
-
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
+type EtherscanV2Response =
+  | {
+      status: string;
+      message: string;
+      result: {
+        records?: EtherscanTransaction[];
+        [key: string]: unknown;
+      };
+    }
+  | {
+      status: string;
+      message: string;
+      result: EtherscanTransaction[];
     };
 
-    // Add API key if available
-    if (BLOCKVISION_API_KEY) {
-      headers["X-API-Key"] = BLOCKVISION_API_KEY;
-    }
+type EtherscanTransaction = {
+  hash: string;
+  from?: string;
+  to?: string;
+  value: string;
+  [key: string]: unknown;
+};
 
-    const response = await fetch(url.toString(), {
+/**
+ * Fetches the most recent transaction amount (in MON) for a given address
+ * using Etherscan's Monad transaction endpoint.
+ *
+ * @param address - Target address to inspect
+ * @returns Formatted amount string (converted from wei) or null if unavailable
+ */
+async function fetchTokenAmount(address: Address): Promise<string | null> {
+  const checksumAddress = getAddress(address);
+  const lowerCaseAddress = checksumAddress.toLowerCase();
+  const apiKey = process.env.ETHERSCAN_API_KEY;
+
+  if (!apiKey) {
+    console.warn("Missing ETHERSCAN_API_KEY");
+    return null;
+  }
+
+  const url = new URL(ETHERSCAN_ENDPOINT);
+  url.searchParams.set("module", "account");
+  url.searchParams.set("action", "txlistinternal");
+  url.searchParams.set("address", lowerCaseAddress);
+  url.searchParams.set("page", "1");
+  url.searchParams.set("offset", DEFAULT_OFFSET);
+  url.searchParams.set("sort", "desc");
+  url.searchParams.set("chainid", MONAD_CHAIN_ID);
+  url.searchParams.set("apikey", apiKey);
+
+  try {
+    const response = await fetch(url, {
       method: "GET",
-      headers,
+      headers: {
+        accept: "application/json",
+      },
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error fetching BlockVision data:", error);
-    throw new Error("Failed to fetch Monad account tokens");
-  }
-}
-
-/**
- * Verifies if an address has received any tokens on Monad (indicating airdrop eligibility)
- * An address is considered eligible if it has any tokens with balance > 0
- * @param address - Monad address to check
- * @returns Promise<boolean> Whether address has received tokens (airdrop eligible)
- */
-async function verifyMonadAirdropReceiver(address: Address): Promise<boolean> {
-  try {
-    const response = await fetchMonadAccountTokens(address);
-
-    // Check if API call was successful
-    if (response.code !== 0) {
-      console.error(
-        "BlockVision API error:",
-        response.reason || response.message
+      throw new Error(
+        `Etherscan API responded with ${response.status}: ${response.statusText}`
       );
-      return false;
     }
 
-    // Check if address has any tokens with balance > 0
-    const hasTokens = response.result.data.some((token) => {
-      const balance = BigInt(token.balance || "0");
-      return balance > BigInt(0);
-    });
+    const payload = (await response.json()) as EtherscanV2Response;
 
-    return hasTokens;
+    if (payload.status !== "1") {
+      throw new Error(`Etherscan API error: ${payload.message}`);
+    }
+
+    const records = Array.isArray(payload.result)
+      ? payload.result
+      : payload.result?.records ?? [];
+
+    const distributorTx = records.find(
+      (tx) =>
+        tx.from?.toLowerCase() === MONAD_AIRDROP_DISTRIBUTOR &&
+        tx.to?.toLowerCase() === lowerCaseAddress
+    );
+
+    const inboundTx =
+      distributorTx ||
+      records.find(
+        (tx) =>
+          tx.to?.toLowerCase() === lowerCaseAddress && tx.value !== undefined
+      ) ||
+      records[0];
+
+    if (!inboundTx?.value) {
+      return null;
+    }
+
+    console.log(
+      `Fetched transaction amount from Etherscan (hash: ${inboundTx.hash}): ${inboundTx.value}`
+    );
+
+    try {
+      return formatEther(BigInt(inboundTx.value));
+    } catch (formatError) {
+      console.warn(
+        "Failed to format transaction value, returning raw string",
+        formatError
+      );
+      return inboundTx.value;
+    }
   } catch (error) {
-    console.error("Error verifying Monad airdrop receiver:", error);
-    return false;
+    console.error("Failed to fetch transaction amount:", error);
+    return null;
   }
 }
 
@@ -111,10 +132,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get verification results
-    const mint_eligibility = await verifyMonadAirdropReceiver(
-      address as Address
-    );
+    // Fetch last inbound amount; consider eligible if value > 0
+    const formattedAmount = await fetchTokenAmount(address as Address);
+    const mint_eligibility =
+      formattedAmount !== null && formattedAmount !== "0";
 
     // Generate cryptographic signature of the verification results
     const signature = await createSignature({
