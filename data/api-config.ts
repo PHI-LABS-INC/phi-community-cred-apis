@@ -1,6 +1,13 @@
 export const endpoints = [
   {
     method: "GET",
+    path: "/api/base/cody-holder",
+    id: "verifycodyholder",
+    description:
+      "Verifies if an Ethereum address holds any Cody tokens on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
     path: "/api/base/wish-holder",
     id: "verifywishholder",
     description:
