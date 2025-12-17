@@ -1,6 +1,13 @@
 export const endpoints = [
   {
     method: "GET",
+    path: "/api/base/wish-holder",
+    id: "verifywishholder",
+    description:
+      "Verifies if an Ethereum address holds any Wish tokens on Base and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
     path: "/api/base/based-caster",
     id: "verifybasedcaster",
     description:
