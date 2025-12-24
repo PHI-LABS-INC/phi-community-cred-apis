@@ -1,6 +1,13 @@
 export const endpoints = [
   {
     method: "GET",
+    path: "/api/base/hyperliquid-depositor",
+    id: "verifyhyperliquiddepositor",
+    description:
+      "Verifies if an Ethereum address has deposited to Hyperliquid on Arbitrum and returns eligibility status with cryptographic signature",
+  },
+  {
+    method: "GET",
     path: "/api/base/play-cody-game",
     id: "verifyplaycodygame",
     description:

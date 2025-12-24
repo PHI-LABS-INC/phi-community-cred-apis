@@ -1,5 +1,5 @@
 import { Address, PublicClient, createPublicClient, http } from "viem";
-import { base, mainnet } from "viem/chains";
+import { base, mainnet, arbitrum } from "viem/chains";
 
 // Types for transaction data
 export interface TransactionItem {
@@ -36,6 +36,10 @@ interface GraphQLResponse {
 // Create public clients for different chains
 const baseClient = createPublicClient({ chain: base, transport: http() });
 const mainnetClient = createPublicClient({ chain: mainnet, transport: http() });
+const arbitrumClient = createPublicClient({
+  chain: arbitrum,
+  transport: http(),
+});
 
 /**
  * Check if an address is a smart contract
@@ -225,7 +229,12 @@ export async function getTransactions(
   address: Address,
   chainId: number = 8453
 ): Promise<TransactionItem[]> {
-  const client = chainId === 8453 ? baseClient : mainnetClient;
+  const client =
+    chainId === 8453
+      ? baseClient
+      : chainId === 42161
+      ? arbitrumClient
+      : mainnetClient;
   const isContract = await isContractAddress(client as PublicClient, address);
 
   if (isContract) {
