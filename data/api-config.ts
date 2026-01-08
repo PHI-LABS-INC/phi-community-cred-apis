@@ -470,6 +470,13 @@ export const endpoints = [
   },
   {
     method: "GET",
+    path: "/api/base/new-years-day-2026",
+    id: "verifynewyearsday2026",
+    description:
+      "Verifies if an Ethereum address has transacted on Base on New Year's Day 2026 (January 1st, 2026) and returns eligibility status",
+  },
+  {
+    method: "GET",
     path: "/api/base/base-gas",
     id: "verifybasegas",
     description:
